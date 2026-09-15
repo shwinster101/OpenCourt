@@ -1,0 +1,938 @@
+/* ============================================================
+   SEASONAL THEME SYSTEM
+   Tied to the next Grand Slam. Themes shift automatically based
+   on date. Each theme retunes the entire color palette via
+   CSS custom properties — no per-element changes needed.
+
+   2026 Grand Slam calendar (verified):
+   - Australian Open:  Jan 19 – Feb 1   → blue / hard court
+   - French Open:      May 24 – Jun 7   → clay / terracotta
+   - Wimbledon:        Jun 29 – Jul 12  → grass / purple+green
+   - US Open:          Aug 31 – Sep 13  → night / electric blue
+   ============================================================ */
+
+/* === FRENCH OPEN (clay) — active May → late June === */
+[data-theme="french-open"] {
+  --paper: #f5ead8;
+  --paper-dark: #ecdcc1;
+  --ink: #2a1a10;
+  --ink-soft: #5a3c2a;
+  --ink-mute: #9a7d65;
+  --court-green: #2d5a3d;
+  --accent: #c8633a;          /* Roland-Garros clay */
+  --accent-dark: #8a3e1c;
+  --accent-soft: #e89870;
+  --line-white: #faf2e3;
+  --status-open: #2d5a3d;
+  --status-toss: #c89028;
+  --status-full: #b03a2e;
+  --border: #d4be99;
+  --shadow: rgba(60, 30, 15, 0.10);
+  --bg-pattern: radial-gradient(circle at 20% 30%, rgba(200, 99, 58, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(45, 90, 61, 0.03) 0%, transparent 50%);
+  --slam-name: "Roland-Garros";
+  --slam-surface: "clay";
+}
+
+/* === WIMBLEDON (grass) — active mid-June → late July === */
+[data-theme="wimbledon"] {
+  --paper: #f0f4ec;
+  --paper-dark: #e2ead8;
+  --ink: #1a2418;
+  --ink-soft: #3a4a30;
+  --ink-mute: #6a7a60;
+  --court-green: #2d5a3d;
+  --accent: #4f3478;           /* Wimbledon purple */
+  --accent-dark: #38245a;
+  --accent-soft: #8a6db3;
+  --line-white: #ffffff;
+  --status-open: #2d5a3d;
+  --status-toss: #c89028;
+  --status-full: #8a2a2a;
+  --border: #c5d4b8;
+  --shadow: rgba(20, 40, 20, 0.10);
+  --bg-pattern: linear-gradient(135deg, rgba(45, 90, 61, 0.04) 0%, transparent 40%),
+                linear-gradient(45deg, rgba(79, 52, 120, 0.03) 0%, transparent 40%);
+  --slam-name: "The Championships";
+  --slam-surface: "grass";
+}
+
+/* === US OPEN (hard court / night session) — late July → mid-Sep === */
+[data-theme="us-open"] {
+  --paper: #eef2f5;
+  --paper-dark: #dce4ea;
+  --ink: #0e1a2a;
+  --ink-soft: #2a3e58;
+  --ink-mute: #6a7e90;
+  --court-green: #2d5a3d;
+  --accent: #0a4a8a;           /* US Open deco blue */
+  --accent-dark: #062d55;
+  --accent-soft: #4a82c0;
+  --line-white: #ffffff;
+  --status-open: #1f7a3e;
+  --status-toss: #d88a1a;
+  --status-full: #c43a2e;
+  --border: #b8c8d6;
+  --shadow: rgba(10, 30, 60, 0.10);
+  --bg-pattern: radial-gradient(ellipse at top, rgba(10, 74, 138, 0.05) 0%, transparent 60%);
+  --slam-name: "US Open";
+  --slam-surface: "hard";
+}
+
+/* === AUSTRALIAN OPEN (rebound ace / summer down-under) — mid-Sep → early Feb === */
+[data-theme="australian-open"] {
+  --paper: #eaf3f8;
+  --paper-dark: #d4e4ec;
+  --ink: #0a2030;
+  --ink-soft: #1f4860;
+  --ink-mute: #5a8095;
+  --court-green: #2d5a3d;
+  --accent: #1da7c8;           /* AO rebound-ace teal */
+  --accent-dark: #0f7a96;
+  --accent-soft: #65c5dc;
+  --line-white: #ffffff;
+  --status-open: #2d5a3d;
+  --status-toss: #d4a020;
+  --status-full: #b8362a;
+  --border: #b8d0dc;
+  --shadow: rgba(10, 40, 60, 0.10);
+  --bg-pattern: radial-gradient(circle at 70% 20%, rgba(29, 167, 200, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 30% 90%, rgba(255, 200, 100, 0.04) 0%, transparent 50%);
+  --slam-name: "Australian Open";
+  --slam-surface: "hard";
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Inter Tight', sans-serif;
+  background: var(--paper);
+  background-image: var(--bg-pattern);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  transition: background-color 0.6s ease, color 0.6s ease;
+}
+
+/* ============ LAYOUT ============ */
+.app {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  grid-template-rows: 64px 1fr;
+  grid-template-areas:
+    "header header"
+    "sidebar map";
+  height: 100vh;
+}
+
+/* ============ HEADER ============ */
+header {
+  grid-area: header;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--ink);
+  z-index: 1000;
+}
+
+.brand { display: flex; align-items: baseline; gap: 12px; }
+
+.brand-mark {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  font-style: italic;
+}
+
+.brand-mark .accent {
+  color: var(--accent);
+  font-style: normal;
+  transition: color 0.6s ease;
+}
+
+.brand-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+
+/* Slam season pill */
+.slam-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: var(--line-white);
+  border-radius: 100px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  transition: background-color 0.6s ease;
+}
+
+.slam-icon { font-size: 11px; }
+
+.time-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(244, 239, 230, 0.08);
+  border: 1px solid rgba(244, 239, 230, 0.15);
+  border-radius: 100px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.time-pulse {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #5fb37a;
+  box-shadow: 0 0 0 0 rgba(95, 179, 122, 0.7);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(95, 179, 122, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(95, 179, 122, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(95, 179, 122, 0); }
+}
+
+.version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-mute);
+  letter-spacing: 0.1em;
+}
+
+/* ============ SIDEBAR ============ */
+.sidebar {
+  grid-area: sidebar;
+  background: var(--paper);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.6s ease, border-color 0.6s ease;
+}
+
+.sidebar-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.sidebar-title em {
+  color: var(--accent);
+  font-style: italic;
+  transition: color 0.6s ease;
+}
+
+.sidebar-subtitle {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.season-hint {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--paper-dark);
+  border-left: 3px solid var(--accent);
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+  transition: background-color 0.6s ease, border-color 0.6s ease;
+}
+
+.season-hint strong {
+  color: var(--accent-dark);
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  display: block;
+  margin-bottom: 2px;
+  transition: color 0.6s ease;
+}
+
+/* Filter chips */
+.filters { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+.filter-group { margin-bottom: 14px; }
+.filter-group:last-child { margin-bottom: 0; }
+
+.filter-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chip {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chip:hover { border-color: var(--ink-soft); color: var(--ink); }
+
+.chip.active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.chip.active-accent {
+  background: var(--accent);
+  color: var(--line-white);
+  border-color: var(--accent);
+}
+
+.chip.active-green {
+  background: var(--court-green);
+  color: var(--paper);
+  border-color: var(--court-green);
+}
+
+/* Stats strip */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+
+.stat { display: flex; flex-direction: column; gap: 2px; }
+
+.stat-num {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.stat-num.green { color: var(--status-open); }
+.stat-num.amber { color: var(--status-toss); }
+.stat-num.red { color: var(--status-full); }
+
+.stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+}
+
+/* Court list */
+.court-list { flex: 1; padding: 8px 0; }
+
+.court-item {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s ease;
+  position: relative;
+}
+
+.court-item:hover { background: var(--paper-dark); }
+.court-item.selected { background: var(--paper-dark); }
+
+.court-item.selected::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  transition: background 0.6s ease;
+}
+
+.court-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.court-name {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+}
+
+.court-meta {
+  font-size: 12px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.court-meta-dot {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: var(--ink-mute);
+}
+
+.tier-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tier-free { background: rgba(45, 90, 61, 0.12); color: var(--court-green); }
+.tier-lowcost { background: rgba(200, 144, 40, 0.15); color: #8a6418; }
+.tier-private { background: rgba(74, 72, 66, 0.12); color: var(--ink-soft); }
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--line-white);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: background 0.6s ease;
+}
+
+.live-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--line-white);
+  animation: pulse 2s infinite;
+}
+
+.availability-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.avail-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--paper);
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+.avail-dot.open { background: var(--status-open); color: var(--status-open); }
+.avail-dot.toss { background: var(--status-toss); color: var(--status-toss); }
+.avail-dot.full { background: var(--status-full); color: var(--status-full); }
+
+.avail-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.avail-label.open { color: var(--status-open); }
+.avail-label.toss { color: #8a6418; }
+.avail-label.full { color: var(--status-full); }
+
+/* ============ MAP ============ */
+.map-wrap { grid-area: map; position: relative; }
+#map { width: 100%; height: 100%; background: var(--paper-dark); }
+
+/* Map legend overlay */
+.map-legend {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px var(--shadow);
+  z-index: 500;
+  font-family: 'Inter Tight', sans-serif;
+  transition: background-color 0.6s ease, border-color 0.6s ease;
+}
+
+.legend-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.legend-row:last-child { margin-bottom: 0; }
+
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-dot.open { background: var(--status-open); }
+.legend-dot.toss { background: var(--status-toss); }
+.legend-dot.full { background: var(--status-full); }
+
+/* Detail panel */
+.detail-panel {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 360px;
+  max-height: calc(100vh - 112px);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 40px var(--shadow);
+  z-index: 600;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(calc(100% + 48px));
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0.32, 1),
+              background-color 0.6s ease, border-color 0.6s ease;
+}
+
+.detail-panel.open { transform: translateX(0); }
+
+.detail-header {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 18px 20px 16px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.detail-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: rgba(244, 239, 230, 0.1);
+  border: none;
+  color: var(--paper);
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.detail-close:hover { background: rgba(244, 239, 230, 0.2); }
+
+.detail-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+}
+
+.detail-name {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  padding-right: 36px;
+}
+
+.detail-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+}
+
+.detail-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.detail-status.open { background: rgba(45, 90, 61, 0.08); border: 1px solid rgba(45, 90, 61, 0.2); }
+.detail-status.toss { background: rgba(200, 144, 40, 0.1); border: 1px solid rgba(200, 144, 40, 0.25); }
+.detail-status.full { background: rgba(176, 58, 46, 0.08); border: 1px solid rgba(176, 58, 46, 0.2); }
+
+.detail-status-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.detail-status-dot.open { background: var(--status-open); }
+.detail-status-dot.toss { background: var(--status-toss); }
+.detail-status-dot.full { background: var(--status-full); }
+
+.detail-status-text { flex: 1; }
+.detail-status-label { font-weight: 600; font-size: 14px; line-height: 1.2; }
+.detail-status-label.open { color: var(--status-open); }
+.detail-status-label.toss { color: #8a6418; }
+.detail-status-label.full { color: var(--status-full); }
+
+.detail-status-note {
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.detail-status-source {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+}
+
+.detail-rows { display: flex; flex-direction: column; gap: 10px; }
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.detail-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+.detail-key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+  flex-shrink: 0;
+}
+
+.detail-val {
+  font-size: 13px;
+  color: var(--ink);
+  text-align: right;
+  line-height: 1.3;
+}
+
+.detail-sports { display: flex; gap: 6px; margin-top: 12px; }
+
+.sport-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+}
+
+.sport-tag.tennis {
+  background: rgba(45, 90, 61, 0.06);
+  border-color: rgba(45, 90, 61, 0.3);
+  color: var(--court-green);
+}
+
+.sport-tag.pickleball {
+  background: rgba(200, 99, 58, 0.08);
+  border-color: rgba(200, 99, 58, 0.3);
+  color: var(--accent-dark);
+}
+
+/* === REPORT AVAILABILITY (3-BUTTON UI) === */
+.report-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.report-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-mute);
+  margin-bottom: 10px;
+}
+
+.report-prompt {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.report-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.report-btn {
+  padding: 12px 8px;
+  border: 1.5px solid var(--border);
+  background: var(--paper);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Inter Tight', sans-serif;
+}
+
+.report-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--shadow); }
+.report-btn:active { transform: translateY(0); }
+
+.report-btn-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  margin-bottom: 2px;
+}
+
+.report-btn[data-status="open"] .report-btn-dot { background: var(--status-open); }
+.report-btn[data-status="toss"] .report-btn-dot { background: var(--status-toss); }
+.report-btn[data-status="full"] .report-btn-dot { background: var(--status-full); }
+
+.report-btn[data-status="open"]:hover { border-color: var(--status-open); background: rgba(45, 90, 61, 0.06); }
+.report-btn[data-status="toss"]:hover { border-color: var(--status-toss); background: rgba(200, 144, 40, 0.06); }
+.report-btn[data-status="full"]:hover { border-color: var(--status-full); background: rgba(176, 58, 46, 0.06); }
+
+.report-btn-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.report-btn-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.report-feedback {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--paper-dark);
+  border-left: 3px solid var(--status-open);
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+  display: none;
+}
+
+.report-feedback.shown { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.directions-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  text-align: center;
+  text-decoration: none;
+}
+
+.directions-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+/* Decorative crosshair flourishes */
+.corner-mark {
+  position: absolute;
+  width: 12px; height: 12px;
+  border-color: var(--ink-mute);
+  border-style: solid;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.corner-mark.tl { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+.corner-mark.tr { top: 8px; right: 8px; border-width: 1px 1px 0 0; }
+.corner-mark.bl { bottom: 8px; left: 8px; border-width: 0 0 1px 1px; }
+.corner-mark.br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+
+/* Custom scrollbar */
+.sidebar::-webkit-scrollbar, .detail-body::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-track, .detail-body::-webkit-scrollbar-track { background: var(--paper); }
+.sidebar::-webkit-scrollbar-thumb, .detail-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* Google Maps custom marker pin */
+.gm-pin {
+  position: relative;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 3px solid var(--line-white);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--line-white);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.gm-pin:hover { transform: scale(1.15); }
+.gm-pin.open { background: var(--status-open); }
+.gm-pin.toss { background: var(--status-toss); }
+.gm-pin.full { background: var(--status-full); }
+.gm-pin.selected {
+  transform: scale(1.3);
+  border-color: var(--accent);
+  border-width: 4px;
+  z-index: 1000;
+}
+
+.gm-pin.has-live::after {
+  content: '';
+  position: absolute;
+  top: -2px; right: -2px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--line-white);
+  animation: pulse 2s infinite;
+}
+
+/* Loading state */
+.map-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-dark);
+  z-index: 100;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-mute);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.map-loading.hidden { display: none; }
+
+/* Map-key warning banner */
+.map-key-warning {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: var(--line-white);
+  padding: 10px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px var(--shadow);
+  z-index: 700;
+  font-size: 12px;
+  font-weight: 500;
+  max-width: 500px;
+  text-align: center;
+  line-height: 1.4;
+  display: none;
+}
+
+.map-key-warning.shown { display: block; }
+
+.map-key-warning code {
+  background: rgba(0,0,0,0.15);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+/* Responsive */
+@media (max-width: 880px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 64px 40vh 1fr;
+    grid-template-areas: "header" "map" "sidebar";
+  }
+  .sidebar { border-right: none; border-top: 1px solid var(--border); }
+  .detail-panel {
+    top: auto; bottom: 24px; right: 12px; left: 12px;
+    width: auto; max-height: 80vh;
+  }
+  .brand-tag { display: none; }
+}

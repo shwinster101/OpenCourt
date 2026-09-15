@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="australian-open">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenCourt LA — Find an Open Court</title>
+  <meta name="description" content="Find open tennis and pickleball courts across Los Angeles County. Crowdsourced live availability + smart heuristics.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+
+  <!-- Open Graph / social -->
+  <meta property="og:title" content="OpenCourt LA">
+  <meta property="og:description" content="Turning 'where can I play?' into 'I'm on my way.'">
+  <meta property="og:type" content="website">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <span class="brand-mark">Open<span class="accent">Court</span> LA</span>
+      <span class="brand-tag">— turning "where can I play?" into "I'm on my way."</span>
+    </div>
+    <div class="header-right">
+      <div class="slam-pill" id="slam-pill">
+        <span class="slam-icon">🎾</span>
+        <span id="slam-name">Loading…</span>
+      </div>
+      <div class="time-pill">
+        <span class="time-pulse"></span>
+        <span id="current-time">—</span>
+      </div>
+      <span class="version">v1.0.1</span>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1 class="sidebar-title">Find an <em>open court</em>.</h1>
+      <p class="sidebar-subtitle">Tennis & pickleball across LA County. Availability scored from court count, time of day, and demand — sharpened by live reports from other players.</p>
+      <div class="season-hint">
+        <strong id="hint-title">Season</strong>
+        <span id="hint-body">—</span>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-group">
+        <div class="filter-label">Sport</div>
+        <div class="chip-row" id="sport-chips">
+          <button class="chip active" data-filter="sport" data-value="all">All</button>
+          <button class="chip" data-filter="sport" data-value="tennis">Tennis</button>
+          <button class="chip" data-filter="sport" data-value="pickleball">Pickleball</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Access tier</div>
+        <div class="chip-row" id="tier-chips">
+          <button class="chip active" data-filter="tier" data-value="all">All</button>
+          <button class="chip" data-filter="tier" data-value="free">Free</button>
+          <button class="chip" data-filter="tier" data-value="low-cost">Low-cost</button>
+          <button class="chip" data-filter="tier" data-value="private">Private</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Likely status now</div>
+        <div class="chip-row" id="status-chips">
+          <button class="chip active" data-filter="status" data-value="all">All</button>
+          <button class="chip" data-filter="status" data-value="open">Open</button>
+          <button class="chip" data-filter="status" data-value="toss">Toss-up</button>
+          <button class="chip" data-filter="status" data-value="full">Full</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num green" id="stat-open">0</div>
+        <div class="stat-label">Likely open</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num amber" id="stat-toss">0</div>
+        <div class="stat-label">Toss-up</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num red" id="stat-full">0</div>
+        <div class="stat-label">Likely full</div>
+      </div>
+    </div>
+
+    <div class="court-list" id="court-list"></div>
+  </aside>
+
+  <!-- MAP -->
+  <main class="map-wrap">
+    <span class="corner-mark tl"></span>
+    <span class="corner-mark tr"></span>
+    <span class="corner-mark bl"></span>
+    <span class="corner-mark br"></span>
+
+    <div id="map"></div>
+    <div class="map-loading" id="map-loading">Loading map…</div>
+    <div class="map-key-warning" id="key-warning">
+      <strong>Add your Google Maps API key</strong><br>
+      Replace <code>YOUR_GOOGLE_MAPS_API_KEY</code> at the bottom of <code>index.html</code>. Restrict the key by HTTP referrer in Google Cloud Console before pushing to GitHub.
+    </div>
+
+    <div class="map-legend">
+      <div class="legend-title">Availability</div>
+      <div class="legend-row"><span class="legend-dot open"></span> Likely open</div>
+      <div class="legend-row"><span class="legend-dot toss"></span> Toss-up</div>
+      <div class="legend-row"><span class="legend-dot full"></span> Likely full</div>
+    </div>
+
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-header">
+        <button class="detail-close" id="detail-close">×</button>
+        <div class="detail-eyebrow" id="detail-eyebrow">Court detail</div>
+        <div class="detail-name" id="detail-name">—</div>
+      </div>
+      <div class="detail-body" id="detail-body"></div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Application logic -->
+<script src="assets/js/app.js" defer></script>
+
+<!--
+  GOOGLE MAPS JAVASCRIPT API
+  ──────────────────────────
+  1. Get a key at: https://console.cloud.google.com/google/maps-apis/credentials
+  2. Enable the "Maps JavaScript API" for your project.
+  3. Restrict the key by HTTP referrer (your GitHub Pages domain).
+  4. Replace YOUR_GOOGLE_MAPS_API_KEY below with the real key.
+-->
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=marker&callback=initMap&loading=async">
+</script>
+
+</body>
+</html>

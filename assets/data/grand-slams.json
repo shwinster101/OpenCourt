@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "season": 2026,
+    "source": "2026 Grand Slam calendar, verified against multiple public sources",
+    "notes": "Each entry's 'activate' date is when the OpenCourt theme should switch to this slam. Update this file annually."
+  },
+  "slams": [
+    {
+      "id": "australian-open",
+      "name": "Australian Open",
+      "surface": "hard",
+      "activate": "2025-12-20",
+      "start": "2026-01-19",
+      "end": "2026-02-01",
+      "emoji": "🇦🇺",
+      "venue": "Melbourne Park"
+    },
+    {
+      "id": "french-open",
+      "name": "Roland-Garros",
+      "surface": "clay",
+      "activate": "2026-04-26",
+      "start": "2026-05-24",
+      "end": "2026-06-07",
+      "emoji": "🇫🇷",
+      "venue": "Stade Roland Garros, Paris"
+    },
+    {
+      "id": "wimbledon",
+      "name": "Wimbledon",
+      "surface": "grass",
+      "activate": "2026-06-08",
+      "start": "2026-06-29",
+      "end": "2026-07-12",
+      "emoji": "🇬🇧",
+      "venue": "All England Club, London"
+    },
+    {
+      "id": "us-open",
+      "name": "US Open",
+      "surface": "hard",
+      "activate": "2026-07-13",
+      "start": "2026-08-31",
+      "end": "2026-09-13",
+      "emoji": "🇺🇸",
+      "venue": "USTA Billie Jean King NTC, New York"
+    },
+    {
+      "id": "australian-open",
+      "name": "Australian Open",
+      "surface": "hard",
+      "activate": "2026-09-14",
+      "start": "2027-01-18",
+      "end": "2027-01-31",
+      "emoji": "🇦🇺",
+      "venue": "Melbourne Park"
+    }
+  ]
+}

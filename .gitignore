@@ -1,0 +1,44 @@
+# ============================================================
+# OpenCourt LA — .gitignore
+# Static site, no build step in v1. Keep this list minimal.
+# ============================================================
+
+# Secrets and local config
+.env
+.env.local
+.env.*.local
+config.local.js
+secrets.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS / misc
+Thumbs.db
+Desktop.ini
+*.log
+
+# Local development artifacts
+.cache/
+tmp/
+temp/
+
+# If you later add a Node-based dev server or build tooling:
+# node_modules/
+# dist/
+# build/
+# .next/
+# .vercel/
+
+# Local backups
+*.bak
+*.backup
