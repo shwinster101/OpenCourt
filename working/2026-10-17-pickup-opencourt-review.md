@@ -277,6 +277,29 @@ macro gate" heading and a Phase-0 placeholder remains in the conventions file. `
   ranked findings (all of which re-appear in §4 as B1–B18) and the two corrections recorded in §2.
   Its appendix maps every Arian commit to the branch it came from.
 
+**The adversarial verification pass** (two skeptic lenses per high finding, one per medium) ran
+until the subagent limit returned at 12:3x UTC. Verdicts that completed, with my own source re-read
+where the pass did not run:
+
+| Finding | Code lens | Significance lens | Net |
+|---|---|---|---|
+| opencourt-1 (Advanced Markers without a Map ID) | not refuted, high | not refuted, high | **confirmed**, and independently confirmed in the browser (§9) |
+| opencourt-2 (committed key; docs stale) | not refuted, high | not refuted; proposes severity low because the key is referrer-restricted | confirmed; kept high only because the live page shows Google's error dialog (§9) |
+| opencourt-3 (report copy promises a shared signal) | not refuted, high | not run | confirmed |
+| opencourt-4 (unescaped `innerHTML`) | not refuted, high | not run | confirmed |
+| intent-1 (delivered core is a game with a result) | not refuted; tightens: the MVP vote is untested, `test_end_event` is broken, scheduler untested | not refuted; severity medium (restates the recorded baseline) | confirmed; FOUNDATION DR-14 amended in spirit: score-entry and MVP acceptance tests must be written, not ported |
+| intent-2 (college friend group) | not refuted, medium: overstated | **refuted**, medium: `college` is not the only extra attribute (`goat_score`), the shipped sign-up never populates it, nothing targets a campus | **contested → softened** in FOUNDATION §1 to "plausibly, circumstantial" |
+| intent-3 (tennis hard-coded) | not refuted, high | not refuted, high | confirmed |
+| intent-4 (the "where" half is demo data) | not refuted (line numbers 45–54, not 25) | not refuted, medium | confirmed |
+| intent-5 ("Teammates", mutual by construction) | not refuted, high | not run | confirmed |
+| intent-6 (GOAT score never computed) | not refuted, high | not run | confirmed |
+| conventions-9 (only the working-rhythm rules port) | not refuted, high (21 of 23 sections are MacroDash-specific) | not run | confirmed |
+| history-1…12, opencourt-5…12, intent-7…12, conventions-1…8, 10–12 | not run (limit) | not run | history-1…12 and opencourt-5…7 were each re-read in source by me and stand (§4 B1–B18, §5 O5–O7); the rest are low/info and recorded as the readers stated them |
+
+The first attempt at the whole workflow (06:16–06:29 UTC) and the verification tail (12:3x UTC)
+both died on the session's subagent limit; the readers' reports survived because they were written
+to files before the structured-output step.
+
 ## 9. Verification
 
 - `sh scripts/check.sh` in OpenCourt: **GATE PASSED** (2 JSON files, 1 JS file, no secret-shaped
@@ -325,4 +348,17 @@ macro gate" heading and a Phase-0 placeholder remains in the conventions file. `
   a README saying so; delete the folder once they land in their own repos. Fix for the owner: install
   the Claude GitHub App on the `PickUpBois` organisation (or reconnect GitHub) at
   https://claude.ai/connect-github, then a session with those repos attached can push.
-- **shwinster101/OpenCourt** — SHAs appended below after the push.
+- **shwinster101/OpenCourt** — `2af6967` "v1.1.0: PickUp comes home …" pushed to
+  `claude/pickup-opencourt-migration-rbgxlp` (new branch on origin; `main` untouched; no deploy,
+  since Pages deploys only from `main`). A follow-up commit on the same branch records the
+  verification verdicts above and this Outcomes section. The gate (`scripts/check.sh`) passed on
+  both.
+- **What shipped:** FOUNDATION, LEGACY_PICKUP_BACKEND, MIGRATION, project-conventions, CLAUDE.md,
+  AGENTS.md, scripts/check.sh, the logo and icon, README/PROJECT_BRIEF/REQUIREMENTS pointers, the
+  staged legacy docs, this note. **Deliberately left:** every code change (the pins fix, the honesty
+  wording, the Pages artifact, the repo-URL placeholders) — all listed under M0.5 for the owner's
+  call; MacroDash untouched; no credential removal (revocation first).
+- **Where the survey was wrong, kept beside the original text:** §2 (the pre-Hasura custom server
+  and the ID-token-then-UID-header sequence); FOUNDATION §1's campus framing (softened after the
+  skeptic's refutation); LEGACY's first draft of `friend_status`, the delete-timer path, `end_event`'s
+  return and the `GraphQLClient` ("a second transport" → dead code).

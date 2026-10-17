@@ -37,10 +37,12 @@ tabs Home · Search · Event · NearMe · Profile; copy reads "Create Pickup", "
 "Find teammates", "Team Members", "GOAT"; sign-up asks first name, last name, username, email,
 password; the profile carries a `college`; the enum of sports is `tennis` and `basketball`;
 the icon strip shows sixteen sports (assets `b1`–`b16`); the wordmark spells PickUp in six
-colours with a ball in every letter. The team was a college friend group building for its own
-campus and gyms (INFERENCE from the `college` field, the backend author's `usc.edu` address, an
-unused Iowa State campus-map asset and the mock venue "State Gym", and commit timestamps in US
-Central time). Friends are called **"Teammates"** throughout the UI; a pickup is a scheduled game
+colours with a ball in every letter. The team was plausibly a college friend group building for
+its own campus and gyms (INFERENCE, circumstantial: the GitHub organisation `PickUpBois`, an
+optional `college` column that the shipped sign-up never populated, the backend author's `usc.edu`
+address, an unused Iowa State campus-map asset and the mock venue "State Gym", commit timestamps
+in US Central time; nothing in the code targets a campus). Friends are called **"Teammates"**
+throughout the UI; a pickup is a scheduled game
 with a capacity ("e.g. 4 (doubles)"), scored in sets; the backend nags the organiser to close the
 game with a result. No written problem statement exists in either 2021 repository (the README is an
 Xcode tutorial, the backend README is empty): the issue is reconstructed from what was built first
