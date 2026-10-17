@@ -237,6 +237,22 @@ the plan got wrong, the commit SHAs), per `CLAUDE.md`.
 
 ---
 
+## 7b. Build status (v1.2.0, 2026-10-17)
+
+| Step | Status | Evidence |
+|---|---|---|
+| M0.5 | 🔶 pins restored (OverlayView path; `GOOGLE_MAP_ID` opt-in for Advanced Markers); honesty wording fixed; `esc()` added; **not done:** the Maps key/console check (owner), README/SETUP placeholder URLs, the Pages `_site/` artifact | `assets/js/app.js`, headless-browser run in the working note |
+| M1 | ✅ built and tested; ⬜ provisioned | `supabase/migrations/0001`, `test/backend/t_010` (25 assertions); `supabase/README.md` |
+| M2 | ✅ built and tested; page wired (pickups on the court panel, name prompt, share link, inbox); ⬜ provisioned | `0002`, `t_020` (71), `assets/js/backend.js`, fake-backend browser run |
+| M3 | ✅ SQL built and tested; ⬜ screens | `0003`, `t_030` (71) |
+| M4 | ⬜ (`linkEmail` exists in the client, no UI; no realtime, no push) | — |
+| M5 | ⬜ | — |
+
+Deviations from the plan above, each recorded as a ruling in `docs/project-conventions.md`: a
+profile on an anonymous session is enough to play; notifications are written inside the RPC
+transaction (not by table triggers; same guarantee, no second request); M3 landed as SQL before M2
+had its screens finished because the tests made it cheap.
+
 ## 8. Risks and open decisions
 
 | Risk / decision | Position | Owner call needed |

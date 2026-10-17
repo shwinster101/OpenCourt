@@ -2,7 +2,7 @@
 
 **Issue · goal · vision · mission · personas · user stories · workflow · fundamental requirements**
 
-**Version 1.1.0 · 2026-10-17 · Status: adopted as the north star for the PickUp → OpenCourt migration.**
+**Version 1.2.0 · 2026-10-17 · Status: adopted as the north star for the PickUp → OpenCourt migration; the shared backend (M1–M3 SQL, M2 screens) is built and tested, awaiting the owner's Supabase project.**
 Owner ruling (2026-10-17): *"OpenCourt is the modern successor — though keeping the PickUp namesake
 and logo will be the path forward: migration of PickUp backend flow to the OpenCourt structure and
 working APIs."*
@@ -111,7 +111,7 @@ Status columns: **2021** = what the PickUp iOS app and backend actually delivere
 
 | ID | Story | 2021 | Now | Phase |
 |---|---|---|---|---|
-| US-A1 | As a player I want courts shown on a map with a synced list so that I can pick one near me. | placeholder (Apple Maps text search only) | 🔶 FR-01–03 built; the pins currently do not render (Advanced Markers without a Map ID, verified 2026-10-17; M0.5) | 1 |
+| US-A1 | As a player I want courts shown on a map with a synced list so that I can pick one near me. | placeholder (Apple Maps text search only) | ✅ FR-01–03 (pins redrawn through OverlayView in v1.2.0; the Maps key itself is the owner's console check) | 1 |
 | US-A2 | As a player I want each court's tier (free / low-cost / private), court count, sport(s), notes and directions so that I know what I'm walking into. | — | ✅ FR-04–05, FR-10 | 1 |
 | US-A3 | As a player I want to filter by sport, tier and likely status so that the list is short. | placeholder (filter buttons were no-ops) | ✅ FR-11–14 | 1 |
 | US-A4 | As a player I want courts/gyms near me with hours and how busy they are so that I can pick a venue. | placeholder (ten hard-coded places, "BusyBars") | ✅ heuristic; ⬜ hours | 1→2 |
@@ -123,17 +123,17 @@ Status columns: **2021** = what the PickUp iOS app and backend actually delivere
 |---|---|---|---|---|
 | US-B1 | As a player I want a three-state read (likely open / toss-up / likely full) with its source named so that I trust it exactly as much as I should. | — | ✅ FR-20–24 | 1 |
 | US-B2 | As a court steward I want to report Open / Mixed / Full in one tap so that others benefit. | — | ✅ locally (FR-30–33) | 1 |
-| US-B3 | As a player I want everyone's reports, not just my own device's, so that the signal is real. | — | ⬜ FR-34 | 2 |
-| US-B4 | As a player I want reports rate-limited and decaying so that the signal cannot be gamed or go stale. | — | ⬜ FR-25, FR-36 | 2 |
+| US-B3 | As a player I want everyone's reports, not just my own device's, so that the signal is real. | — | 🔶 built (v1.2.0 `courts_live` + `submit_report`); awaiting the Supabase project | 2 |
+| US-B4 | As a player I want reports rate-limited and decaying so that the signal cannot be gamed or go stale. | — | 🔶 built (15-min limit in `submit_report`, 90-min decay in the view); awaiting the project | 2 |
 
 ### Epic C — Be someone
 
 | ID | Story | 2021 | Now | Phase |
 |---|---|---|---|---|
-| US-C1 | As a new player I want to sign up with name, username and a login so that I have a PickUp identity. | partial | ⬜ | 3 |
+| US-C1 | As a new player I want to sign up with name, username and a login so that I have a PickUp identity. | partial | 🔶 built: name + username on an anonymous session (`upsert_profile`); email link later | 3 |
 | US-C2 | As a player I want to use the app and report courts without an account so that the first visit costs nothing. | — | ✅ (no accounts) | 1→2 |
-| US-C3 | As a player I want to upgrade my anonymous identity to an account without losing my reports and games so that I am not punished for starting light. | — | ⬜ | 3 |
-| US-C4 | As a player I want a profile with photo, name, username, home court or neighbourhood and a skill self-rating so that others recognise me. | implemented (photo, name, username, college); placeholder (skill) | ⬜ | 3 |
+| US-C3 | As a player I want to upgrade my anonymous identity to an account without losing my reports and games so that I am not punished for starting light. | — | 🔶 `Backend.linkEmail` keeps the uid; no screen yet | 3 |
+| US-C4 | As a player I want a profile with photo, name, username, home court or neighbourhood and a skill self-rating so that others recognise me. | implemented (photo, name, username, college); placeholder (skill) | 🔶 name, username, skill, metro built; photo later | 3 |
 | US-C5 | As a player I want to log out and sign back in on another device so that my identity is mine, not the phone's. | implemented | ⬜ | 3 |
 | US-C6 | As a player I want to block or report another player so that I feel safe. | placeholder | ⬜ | 3 |
 
@@ -141,42 +141,42 @@ Status columns: **2021** = what the PickUp iOS app and backend actually delivere
 
 | ID | Story | 2021 | Now | Phase |
 |---|---|---|---|---|
-| US-D1 | As a player I want to search players by name or username so that I can find teammates. | implemented (`search_users`) | ⬜ | 3 |
-| US-D2 | As a player I want to send, accept, reject and cancel friend requests so that my team is consensual. | implemented | ⬜ | 3 |
-| US-D3 | As a player I want to remove a friend so that my team stays current. | implemented | ⬜ | 3 |
-| US-D4 | As a player I want to see a friend's team members so that I can discover players. | implemented | ⬜ | 3 |
+| US-D1 | As a player I want to search players by name or username so that I can find teammates. | implemented (`search_users`) | 🔶 `search_players` (SQL, parameterised); no screen | 3 |
+| US-D2 | As a player I want to send, accept, reject and cancel friend requests so that my team is consensual. | implemented | 🔶 six SQL functions tested; no screen | 3 |
+| US-D3 | As a player I want to remove a friend so that my team stays current. | implemented | 🔶 `remove_friend` tested; no screen | 3 |
+| US-D4 | As a player I want to see a friend's team members so that I can discover players. | implemented | 🔶 `my_friends()`; no screen | 3 |
 
 ### Epic E — Put a game on a court
 
 | ID | Story | 2021 | Now | Phase |
 |---|---|---|---|---|
-| US-E1 | As an organiser I want to create a pickup **at a court** with sport, start time, headcount and a note so that others can find and join it. | partial (court never saved; sport hard-coded tennis) | ⬜ | 3 |
-| US-E2 | As an organiser I want to see and edit my open pickups so that I can manage them. | implemented (list); placeholder (edit) | ⬜ | 3 |
-| US-E3 | As an organiser I want to delete a pickup and have attendees told so that nobody shows up. | implemented (delete); the notification was never sent | ⬜ | 3 |
-| US-E4 | As an organiser I want to invite friends and cancel invitations so that the roster fills. | implemented | ⬜ | 3 |
-| US-E5 | As a player I want to browse upcoming pickups near me, filtered by sport, time and spots left, so that I can find a game. | partial (all events, no filters, "0.25 miles" constant) | ⬜ | 3 |
-| US-E6 | As a player I want to join or leave an open pickup, within its capacity, so that my attendance counts. | implemented (capacity never enforced) | ⬜ | 3 |
-| US-E7 | As an invitee I want to accept or decline an invitation from my notifications so that the organiser knows. | implemented | ⬜ | 3 |
+| US-E1 | As an organiser I want to create a pickup **at a court** with sport, start time, headcount and a note so that others can find and join it. | partial (court never saved; sport hard-coded tennis) | 🔶 built: `create_pickup` + the court-panel form (court, sport from the court's list, time, players, note); awaiting the project | 3 |
+| US-E2 | As an organiser I want to see and edit my open pickups so that I can manage them. | implemented (list); placeholder (edit) | 🔶 `my_pickups` + cancel built; edit not yet | 3 |
+| US-E3 | As an organiser I want to delete a pickup and have attendees told so that nobody shows up. | implemented (delete); the notification was never sent | 🔶 built: `cancel_pickup` notifies every attendee | 3 |
+| US-E4 | As an organiser I want to invite friends and cancel invitations so that the roster fills. | implemented | 🔶 SQL built (`invite_to_pickup`, `cancel_invitation`, `respond_to_invitation`) and inbox accept/decline; the invite screen needs the friends screen | 3 |
+| US-E5 | As a player I want to browse upcoming pickups near me, filtered by sport, time and spots left, so that I can find a game. | partial (all events, no filters, "0.25 miles" constant) | 🔶 per-court list and map marks built; a cross-court board with filters later | 3 |
+| US-E6 | As a player I want to join or leave an open pickup, within its capacity, so that my attendance counts. | implemented (capacity never enforced) | 🔶 built: `join_pickup` enforces capacity under a row lock; awaiting the project | 3 |
+| US-E7 | As an invitee I want to accept or decline an invitation from my notifications so that the organiser knows. | implemented | 🔶 built: inbox Accept / Decline | 3 |
 | US-E8 | As a player I want to say "I'm here, looking for a 4th" at a court so that walk-ups can find me. | — | ⬜ FR-50 | 3 |
-| US-E9 | As a player I want a shareable link to a pickup so that a group chat can join without the app. | — | ⬜ FR-52 | 3 |
+| US-E9 | As a player I want a shareable link to a pickup so that a group chat can join without the app. | — | 🔶 built: Copy link → `#pickup=<token>` opens the court and highlights the pickup | 3 |
 
 ### Epic F — Play, record, rank
 
 | ID | Story | 2021 | Now | Phase |
 |---|---|---|---|---|
-| US-F1 | As an organiser I want the pickup to start by itself at its time so that the record reflects reality. | implemented (in-process timer, lost on restart) | ⬜ | 3 |
-| US-F2 | As an organiser I want to enter teams, set scores and the winner after the game so that the result is recorded. | implemented (team membership was discarded) | ⬜ | 3 |
-| US-F3 | As an attendee I want to vote for the MVP, once, not for myself, so that the result is fair. | implemented (repeat and self votes possible) | ⬜ | 3 |
-| US-F4 | As a player I want to see my past pickups with W/L and the MVP so that I can track my record. | implemented | ⬜ | 3 |
-| US-F5 | As a player I want a standing (the 2021 "GOAT score") earned from MVPs and wins so that reputation means something. | placeholder (column existed, never written) | ⬜ | 3 |
+| US-F1 | As an organiser I want the pickup to start by itself at its time so that the record reflects reality. | implemented (in-process timer, lost on restart) | 🔶 built: `start_due_pickups()` on `pg_cron` | 3 |
+| US-F2 | As an organiser I want to enter teams, set scores and the winner after the game so that the result is recorded. | implemented (team membership was discarded) | 🔶 SQL built (`record_result` records members); no screen | 3 |
+| US-F3 | As an attendee I want to vote for the MVP, once, not for myself, so that the result is fair. | implemented (repeat and self votes possible) | 🔶 SQL built (`vote_mvp`: one vote, not self, leaders-only tie-break); no screen | 3 |
+| US-F4 | As a player I want to see my past pickups with W/L and the MVP so that I can track my record. | implemented | 🔶 `my_pickups` carries the result fields; no screen | 3 |
+| US-F5 | As a player I want a standing (the 2021 "GOAT score") earned from MVPs and wins so that reputation means something. | placeholder (column existed, never written) | 🔶 `player_standing` view (provisional formula); no screen | 3 |
 | US-F6 | As a player I want a head-to-head record with a friend so that we can compare. | placeholder | ⬜ | 5 |
 
 ### Epic G — Be told
 
 | ID | Story | 2021 | Now | Phase |
 |---|---|---|---|---|
-| US-G1 | As a player I want in-app notifications for friend requests and responses, invitations, joins, leaves, deletions, "enter the score", "vote for MVP" and "you are MVP" so that nothing depends on a group chat. | implemented (9 of 10 types written) | ⬜ | 3 |
-| US-G2 | As a player I want to mark a notification read, and only my own, so that my inbox is mine. | implemented (ownership not checked) | ⬜ | 3 |
+| US-G1 | As a player I want in-app notifications for friend requests and responses, invitations, joins, leaves, deletions, "enter the score", "vote for MVP" and "you are MVP" so that nothing depends on a group chat. | implemented (9 of 10 types written) | 🔶 built: ten kinds written in the RPC transactions; inbox shows them | 3 |
+| US-G2 | As a player I want to mark a notification read, and only my own, so that my inbox is mine. | implemented (ownership not checked) | 🔶 built: `mark_notifications_read` and RLS limit it to the recipient | 3 |
 | US-G3 | As a player I want a push when it matters (invitation, game starting, score entered) so that I do not have to open the app. | placeholder (tokens stored, nothing sent) | ⬜ | 3 |
 
 ### Epic H — Share the game (deferred)

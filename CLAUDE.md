@@ -1,5 +1,44 @@
 # CLAUDE.md — OpenCourt (PickUp's successor)
 
+**v1.2.0 — THE SHARED BACKEND, BUILT AND PROVEN BEFORE IT HAS A HOME: COURTS AND REPORTS, IDENTITY AND
+PICKUPS, FRIENDS, RESULTS AND MVP, AS SQL UNDER ROW-LEVEL SECURITY; THE PAGE WIRES TO IT AND STAYS HONEST
+WITHOUT IT.** Owner (2026-10-17): "Run the long term solution build. I'll work on the cloud console key."
+- **The backend is four migrations and a seed** (`supabase/`), no server code. M1 `courts`,
+  `court_reports`, the `courts_live` view, `submit_report()` with the 15-minute rate limit. M2
+  `profiles`, `pickups`, `pickup_attendees`, `notifications`, `event_log`; `upsert_profile`,
+  `create_pickup`, `join_pickup`, `leave_pickup`, `cancel_pickup`, `invite_to_pickup`,
+  `cancel_invitation`, `respond_to_invitation`, `start_due_pickups`, `mark_notifications_read`; views
+  `open_pickups`, `my_pickups`, `my_notifications`; `pickup_by_token`, `pickup_roster`. M3 `friendships`
+  and its six functions, `search_players` (parameterised; 2021 interpolated SQL), `pickup_teams`,
+  `record_result` (team membership recorded; 2021 dropped it), `mvp_votes`, `vote_mvp` (one vote, not
+  self, ties broken among the leaders), `finalize_due_mvp_votes`, `expire_stale_pickups`, the
+  `player_standing` view (2 per win, 3 per MVP, provisional). `0004` schedules the three clock
+  functions with `pg_cron` where it exists.
+- **Every rule 2021 skipped is in SQL under `auth.uid()`:** organiser-only cancel/invite/result,
+  invitee-only respond, capacity under a row lock, start by the database clock, owner-only inbox.
+  Clients cannot insert into any table directly; `anon` reads courts, the board and a shared link.
+- **Proven:** `test/backend/run.sh` starts a throwaway PostgreSQL, applies a Supabase shim (roles,
+  `auth.uid()`, Supabase's default grants), all migrations and the seed, then `t_010`–`t_030`: the 2021
+  pytest flows ported and extended, the cross-user refusal matrix, decay, capacity, the clock, the MVP
+  tie-break and deadline. **167 assertions pass** here on PostgreSQL 16. `sh scripts/check.sh --backend`
+  runs it; the plain gate also checks that `supabase/seed.sql` matches `courts.json`.
+- **The page** (`assets/js/app.js`, `backend.js`, `config.js`; pinned `supabase-js@2.45.4` UMD): with
+  a URL and anon key in `config.js` it reads `courts_live`, writes reports through `submit_report`,
+  lists and starts pickups on each public court (name prompt on first action, anonymous session),
+  joins/leaves/cancels/accepts, copies a share link (`#pickup=<token>`), opens one from a link, and
+  shows an inbox. Without them it serves `courts.json`, keeps reports on the device, and the sidebar
+  says so ("Offline data · reports stay on this device"); nothing claims to be shared. Court fields
+  are escaped before they reach `innerHTML`.
+- **Pins are back:** markers draw through the page's own OverlayView unless a `GOOGLE_MAP_ID` is
+  configured (then Advanced Markers). Verified in headless Chromium: 20 pins, no script errors, in
+  both offline mode and against a fake supabase-js that mirrors the views' shapes.
+- **Decisions recorded** in `docs/project-conventions.md`: a profile (anonymous session allowed) is
+  enough to run a pickup, tightenable in one function; one 90-minute report window on both sides;
+  M2 before M3 in the UI (M3 ships in SQL only this release).
+- **Not done:** no Supabase project exists yet (owner steps in `supabase/README.md`); the friends,
+  results and MVP screens; realtime and push (M4); the visible rename. Working note:
+  `working/2026-10-17-shared-backend-build.md`.
+
 **v1.1.0 — PICKUP COMES HOME: THE NAME AND LOGO STAY, THE 2021 BACKEND FLOW MIGRATES INTO OPENCOURT'S
 STRUCTURE.** Owner (2026-10-17): "Run a thorough review of each repo, and especially read commits run
 by Arian. I want pickup's issue and goal stated, vision, mission statement, and requirements/user
@@ -58,13 +97,15 @@ localStorage reports, seasonal Grand Slam theming, consolidated SRS. See `docs/R
 ## Current brief
 
 PickUp, rebuilt on the OpenCourt structure: a **no-build-step HTML/CSS/JS** web app deployed to
-GitHub Pages on push to `main` (`.github/workflows/pages.yml`). Today it is a court finder for
+GitHub Pages on push to `main` (`.github/workflows/pages.yml`). It is a court finder for
 recreational tennis and pickleball in Los Angeles County (`index.html`, `assets/js/app.js`,
-`assets/css/styles.css`, data in `assets/data/courts.json` and `grand-slams.json`); its Phase 2
-backend is Supabase Postgres (chosen in the SRS, not yet provisioned); its Phase 3 is the 2021 PickUp
-people flow — friends, pickups on courts, invitations, results, MVP, notifications — rebuilt as
-working APIs per `docs/MIGRATION.md`. There is no package manager and no framework. The version
-is the headline of this file; `docs/REQUIREMENTS.md` carries the same number.
+`assets/js/backend.js`, `assets/js/config.js`, `assets/css/styles.css`, seed data in
+`assets/data/courts.json` and `grand-slams.json`) with the PickUp people flow — profiles, pickups on
+courts, invitations, the inbox, and in SQL also friends, results and MVP — on a **Supabase Postgres
+backend defined entirely by `supabase/migrations/`** (PostgREST + RPC + RLS; no server code). The
+page runs with or without the backend and says which. There is no package manager and no framework;
+the only runtime dependency is the pinned `supabase-js` UMD script. The version is the headline of
+this file; `index.html`'s badge and `docs/REQUIREMENTS.md` carry the same number.
 
 ## Required reading
 
@@ -110,13 +151,15 @@ solution.
 ## Verification
 
 ```bash
-sh scripts/check.sh              # the gate: data parses, scripts parse, no secret-shaped strings
+sh scripts/check.sh              # the gate: data parses, scripts parse, no secret-shaped strings, seed current
+sh scripts/check.sh --backend    # + migrations, RLS matrix and the ported 2021 flows on a throwaway PostgreSQL
 python3 -m http.server 8000      # then walk docs/REQUIREMENTS.md §8 by hand at http://localhost:8000
 ```
 
-Pushes to `main` deploy Pages automatically. No production activation is implied by preparing a
-branch. From M1 on, the gate grows a backend test leg (RLS matrix, the ported 2021 flows); until
-then, say so rather than claiming coverage that does not exist.
+The backend leg needs the PostgreSQL server binaries (it skips with a message otherwise; set
+`REQUIRE_BACKEND=1` to fail instead). Pushes to `main` deploy Pages automatically. No production
+activation is implied by preparing a branch; the live backend exists only once the owner provisions
+the Supabase project (`supabase/README.md`) and fills `assets/js/config.js`.
 
 ## Legacy repositories (frozen, read-only)
 

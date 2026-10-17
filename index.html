@@ -41,8 +41,12 @@
         <span class="time-pulse"></span>
         <span id="current-time">—</span>
       </div>
-      <span class="version">v1.0.1</span>
+      <button class="inbox-btn hidden" id="inbox-btn" type="button" aria-label="Notifications">
+        <span aria-hidden="true">🔔</span><span class="inbox-count hidden" id="inbox-count">0</span>
+      </button>
+      <span class="version">v1.2.0</span>
     </div>
+    <div class="inbox" id="inbox" aria-live="polite"></div>
   </header>
 
   <!-- SIDEBAR -->
@@ -50,6 +54,7 @@
     <div class="sidebar-header">
       <h1 class="sidebar-title">Find an <em>open court</em>.</h1>
       <p class="sidebar-subtitle">Tennis & pickleball across LA County. Availability scored from court count, time of day, and demand — sharpened by live reports from other players.</p>
+      <div class="data-source" id="data-source" data-source="offline">Loading…</div>
       <div class="season-hint">
         <strong id="hint-title">Season</strong>
         <span id="hint-body">—</span>
@@ -138,7 +143,12 @@
 
 </div>
 
-<!-- Application logic -->
+<!-- Runtime configuration (public, client-side values only) -->
+<script src="assets/js/config.js"></script>
+<!-- supabase-js, pinned. Loaded only to talk to the shared backend; harmless when config.js is empty. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" defer></script>
+<!-- Backend client, then the application -->
+<script src="assets/js/backend.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 
 <!--

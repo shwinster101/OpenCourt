@@ -26,11 +26,15 @@ pickups, invitations, scores, MVP, notifications) is being migrated from the 202
 
 ```bash
 python3 -m http.server 8000      # serve the site locally (fetch() needs http://, not file://)
-sh scripts/check.sh              # the gate: JSON validity, JS syntax, no secret-shaped strings
+sh scripts/check.sh              # the gate: data parses, JS parses, no secret-shaped strings, seed current
+sh scripts/check.sh --backend    # + the backend leg: migrations, RLS matrix and the ported 2021 flows
+                                 #   against a throwaway PostgreSQL (needs the server binaries; see test/backend/run.sh)
+node scripts/export-courts-seed.mjs > supabase/seed.sql   # after editing assets/data/courts.json
 ```
 
-There is no build step and no package manager. Deploys happen on push to `main` through
-`.github/workflows/pages.yml`.
+There is no build step and no package manager for the site. The backend is SQL only
+(`supabase/`); provisioning steps are in `supabase/README.md`. Deploys happen on push to `main`
+through `.github/workflows/pages.yml`.
 
 ## Non-negotiables (details and rationale in CLAUDE.md)
 

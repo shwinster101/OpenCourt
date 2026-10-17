@@ -24,6 +24,38 @@ and the working rhythm. Read before changes.
 
 ## Locked decisions
 
+### The backend is SQL under row-level security; a profile is enough to play (build rulings 2026-10-17, v1.2.0)
+
+**Owner:** "Run the long term solution build. I'll work on the cloud console key."
+
+- **Everything server-side is a migration** in `supabase/migrations/`: tables, views, functions,
+  policies, grants, schedules. No Express tier, no edge function until push notifications need a
+  secret (M4). Clients never insert into a table directly; every write with a rule is an RPC that
+  reads `auth.uid()`.
+- **A profile (name + username, skill optional) on an anonymous Supabase session is enough to
+  create or join a pickup.** MIGRATION §3 had said "pickups require a non-anonymous account"; the
+  build relaxed it to match the SRS's "lightweight identity (nickname + skill tag)" and keep the
+  first visit free. Tighten it in one place, `require_profile()`, if abuse appears.
+- **One report window: 90 minutes**, in `REPORT_TTL_MINUTES` and in the `courts_live` view;
+  the SRS's "~2 h" (FR-25) is superseded. One rate limit: one report per court per session per
+  15 minutes, enforced in `submit_report()`.
+- **Capacity counts the organiser.** `capacity = 4` is a doubles game including the person who
+  set it up (the 2021 hint read "e.g. 4 (doubles)").
+- **The clock is the database's.** `start_due_pickups()`, `finalize_due_mvp_votes()` and
+  `expire_stale_pickups()` run from `pg_cron`; no process holds timers. A vote closes 24 h after
+  the result with whatever votes exist; a game nobody closed expires after 24 h and never counts.
+- **Standing formula is provisional:** 2 points per win, 3 per MVP, in the `player_standing`
+  view only. Change it there; never store it.
+- **The page never lies about its data.** `#data-source` reads "Shared data" only when the
+  backend answered; otherwise "Offline data · reports stay on this device" (or "Backend
+  unreachable …"), and report feedback says "saved on this device" rather than "shared".
+- **Markers draw through the page's own OverlayView** unless `GOOGLE_MAP_ID` is set; the JSON map
+  style stays. **Unchanged:** the committed Maps key and its restriction are the owner's console
+  work.
+- **M3 (friends, results, MVP) ships in SQL first**, tested, with its screens to follow; M2's
+  screens (pickups, inbox) ship now. **Unchanged:** the SRS's Supabase choice; the no-build rule;
+  the seed stays in `courts.json` and `supabase/seed.sql` is generated from it.
+
 ### OpenCourt is PickUp's successor; the name and logo stay; the 2021 backend flow migrates here (owner ruling 2026-10-17, v1.1.0)
 
 **"Opencourt is the modern successor — though keeping the pickup namesake and logo will be the path

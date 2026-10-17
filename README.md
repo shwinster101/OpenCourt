@@ -45,13 +45,18 @@ opencourt-la/
 ├── assets/
 │   ├── css/styles.css           # All styles + seasonal theme variables
 │   ├── js/app.js                # Application logic
+│   ├── js/backend.js            # Supabase client wrapper (views + RPC); Backend.enabled gates the people features
+│   ├── js/config.js             # Public runtime config: Supabase URL + anon key, optional Map ID
 │   ├── data/
 │   │   ├── courts.json          # Court database (Phase 2 will move to Supabase)
 │   │   └── grand-slams.json     # Grand Slam calendar driving the theme engine
 │   └── img/favicon.svg          # Favicon
 ├── CLAUDE.md                    # Agent brief: rulings, release record, invariants, the gate
 ├── AGENTS.md                    # Thin pointer to CLAUDE.md
-├── scripts/check.sh             # The gate: data parses, scripts parse, no secret-shaped strings
+├── supabase/                    # The backend: migrations/0001–0004 (SQL), seed.sql, README (provisioning)
+├── test/backend/                # run.sh + shim.sql + t_*.sql: the backend test leg on a throwaway PostgreSQL
+├── scripts/check.sh             # The gate: data parses, scripts parse, no secret-shaped strings, seed current (--backend adds the SQL leg)
+├── scripts/export-courts-seed.mjs  # courts.json → supabase/seed.sql
 ├── working/                     # Dated findings notes (the record of each pass)
 ├── docs/
 │   ├── FOUNDATION.md            # PickUp: issue, goal, vision, mission, user stories, workflow, requirements
@@ -90,12 +95,24 @@ You'll see a yellow banner prompting you to add your Google Maps API key. See `d
 
 ## Tech stack
 
-- **Frontend:** Plain HTML / CSS / JavaScript (no framework, no build step)
-- **Map:** Google Maps JavaScript API (with `AdvancedMarkerElement`)
+- **Frontend:** Plain HTML / CSS / JavaScript (no framework, no build step); the only runtime
+  dependency is the pinned `supabase-js` UMD script
+- **Map:** Google Maps JavaScript API; pins drawn by the page (OverlayView), Advanced Markers when a Map ID is configured
 - **Fonts:** Fraunces (display), Inter Tight (UI), JetBrains Mono (data)
-- **Data:** JSON files (Phase 1) → Supabase Postgres (Phase 2 planned)
+- **Data:** `assets/data/courts.json` is the seed; the shared backend is Supabase Postgres defined
+  entirely by `supabase/migrations/` (PostgREST + RPC + row-level security, no server code). Without
+  a configured backend the page runs on the JSON and keeps reports on the device, and says so.
 - **Hosting:** GitHub Pages
 - **Deploy:** GitHub Actions (`.github/workflows/pages.yml`)
+
+## The shared backend
+
+`supabase/` holds four SQL migrations and a seed: courts and crowd reports (M1), profiles, pickups,
+invitations and the inbox (M2), friends, results and MVP (M3), and the `pg_cron` schedules. Every
+rule lives in SQL under `auth.uid()`; clients never write a table directly. `test/backend/run.sh`
+proves it on a throwaway PostgreSQL (the ported 2021 flows plus a cross-user refusal matrix).
+Provisioning steps: [`supabase/README.md`](supabase/README.md). Then put the project URL and anon
+key into `assets/js/config.js`.
 
 ---
 
