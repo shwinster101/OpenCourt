@@ -169,5 +169,7 @@ email upgrade path (`linkEmail` has no UI yet); the Maps key, which is the owner
 
 ## Outcomes
 
-- Build commit: recorded in the follow-up commit below once the SHA exists.
+- Build commit: `daa9ea0` (v1.2.0: supabase/, test/backend/, the page wiring, the gate, the docs). Gate at that
+  commit: `GATE PASSED`; backend leg `BACKEND TESTS PASSED (167 assertions)` on PostgreSQL 16.
+- This note's SHA line: the follow-up commit after `daa9ea0`.
 - Previous pass: `2af6967` (v1.1.0), `253b1f2` (its verification record).
