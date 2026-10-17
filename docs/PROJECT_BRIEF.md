@@ -1,5 +1,9 @@
 # OpenCourt LA — Project Brief
 
+> **2026-10-17:** OpenCourt is the successor of PickUp (2021). The product keeps the PickUp name and
+> logo; the combined issue, goal, vision, mission, user stories and requirements live in
+> [`FOUNDATION.md`](./FOUNDATION.md). This brief remains the court-finder's original statement.
+
 ## Mission
 
 > Turning "where can I play?" into "I'm on my way."
