@@ -1,5 +1,15 @@
 # CLAUDE.md — OpenCourt (PickUp's successor)
 
+**v1.3.3 — THE COURT PANEL IS A BOTTOM SHEET ON PHONES.** Owner (2026-10-18, phone screenshot): "Do a Ux
+pass. I'm unable to close out of this or even see it properly. Map is good but some user wants and usage
+is clunky." Root cause: below 880px the court panel was an absolutely positioned card *inside the 40vh map
+box* with `max-height: 80vh`, so its header and ✕ sat above the visible region and the page scrolled it
+away. Now it is `position: fixed` over the whole viewport (86dvh max), with a grip, a larger ✕ that is the
+element under the finger, a dimmed backdrop that closes it on tap, Escape as the last layer after the sheet
+and the inbox, and a body scroll lock while open; one `openDetail()`/`closeDetail()` pair. Desktop unchanged.
+Verified at 390×844: panel top 166 → bottom 844, ✕ hit-tested, close/Escape/backdrop all close; offline check
+20 pins; fake-backend check errors []. Working note: `working/2026-10-18-ux-pass-phone-sheet.md`.
+
 **v1.3.2 — THE REPOSITORY AND THE LINK ARE PICKUP TOO.** Owner (2026-10-18): "Can we change the repo and link
 to be PickUp?", then renamed the repository themselves: it is `shwinster101/PickUp` and the site is
 **https://shwinster101.github.io/PickUp/** (the old `/OpenCourt/` address answers 404; GitHub redirects the
