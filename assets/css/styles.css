@@ -566,7 +566,7 @@ header {
   background: rgba(244, 239, 230, 0.35); margin: -8px auto 10px;
 }
 .detail-backdrop {
-  display: none; position: fixed; inset: 0; z-index: 1090;
+  display: none; position: fixed; inset: 0; z-index: 890;
   background: rgba(10, 22, 34, 0.35);
 }
 .detail-close {
@@ -948,7 +948,7 @@ header {
     position: fixed; top: auto; bottom: 0; left: 0; right: 0;
     width: auto; max-height: 86vh; max-height: 86dvh;
     border-radius: 16px 16px 0 0; border-bottom: none;
-    z-index: 1100;
+    z-index: 900;   /* under the header's stacking context (1000) so the inbox and the sheet open above it */
     transform: translateY(110%);
     transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.32, 1);
   }
