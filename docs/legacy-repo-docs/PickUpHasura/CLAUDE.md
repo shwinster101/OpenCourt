@@ -4,7 +4,7 @@
 namesake and logo will be the path forward: migration of PickUp backend flow to the OpenCourt
 structure and working APIs." This repository is a **read-only reference**: the flow it implemented
 is documented in OpenCourt's `docs/LEGACY_PICKUP_BACKEND.md` and is being rebuilt per
-`docs/MIGRATION.md` in [`shwinster101/OpenCourt`](https://github.com/shwinster101/OpenCourt). When
+`docs/MIGRATION.md` in [`shwinster101/PickUp`](https://github.com/shwinster101/PickUp). When
 anything here and anything there disagree, OpenCourt wins.
 
 ## ⚠️ Committed credentials — read first

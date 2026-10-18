@@ -3,7 +3,7 @@
 **Status (owner ruling 2026-10-17):** "OpenCourt is the modern successor — though keeping the PickUp
 namesake and logo will be the path forward: migration of PickUp backend flow to the OpenCourt
 structure and working APIs." This repository is therefore a **read-only reference**. The product
-PickUp continues in [`shwinster101/OpenCourt`](https://github.com/shwinster101/OpenCourt), whose
+PickUp continues in [`shwinster101/PickUp`](https://github.com/shwinster101/PickUp), whose
 `CLAUDE.md`, `docs/FOUNDATION.md`, `docs/LEGACY_PICKUP_BACKEND.md` and `docs/MIGRATION.md` are
 canonical. When anything here and anything there disagree, OpenCourt wins.
 
