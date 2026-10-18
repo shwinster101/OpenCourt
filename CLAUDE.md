@@ -1,5 +1,17 @@
 # CLAUDE.md — OpenCourt (PickUp's successor)
 
+**v1.3.1 — THE NAME ON THE DOOR IS PICKUP.** Owner (2026-10-18), on the merged v1.3.0 and the question "Name
+still open court or shall we change to pickup": "yes after that do the pickup name change", taking the
+recommendation "PickUp as the wordmark, using the 2021 logo already in assets/img/, with OpenCourt LA kept as a
+small sub-line or the court-finder section label".
+- **The header** leads with the 2021 wordmark (`assets/img/pickup-logo.png`, byte-identical, on a white tile so
+  its colours read on the dark bar) and keeps "OpenCourt LA" beside it as the catalogue's name; the tagline is
+  unchanged. Page title, description and Open Graph title read PickUp · OpenCourt LA; the 1024px icon is the
+  Apple touch icon. Below 560px the logo is 28px and the sub-line smaller; the v1.3.0 header fit holds.
+- **Unchanged:** the repository, the codebase and the LA court catalogue are OpenCourt; every id, class, file
+  and document name; the no-build rule. Closes the open item in FOUNDATION §3 and the v1.1.0 ruling.
+- Working note: `working/2026-10-18-pickup-rename.md`.
+
 **v1.3.0 — THE PEOPLE FLOW REACHES THE PAGE: FRIENDS, RESULTS, MVP AND STANDING; REALTIME ONLY WHERE IT IS
 HONEST; AN ACCOUNT YOU CAN KEEP; PROVISIONING AS ONE COMMAND; TWO BROWSERS, ONE PROOF, RUN HERE.** Owner
 (2026-10-17): "You do as much as you can look up instructions if needed. provision Supabase and fill config.js,

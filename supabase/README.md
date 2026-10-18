@@ -35,6 +35,10 @@ scripts/provision-supabase.sh --check   # project healthy · config.js holds the
   `SUPABASE_PROJECT_NAME`, `SUPABASE_REGION` (default `us-west-1`, validated against the regions
   the organisation may use), `SUPABASE_DB_PASSWORD`, `SUPABASE_KEY_KIND=publishable` (default:
   the legacy `anon` JWT, which the pinned supabase-js 2.45.4 was built against), `CONFIG_OUT`.
+- **A run stopped partway** (as the first real run did on 2026-10-18, at pg_cron)? Just re-run: the
+  project is reused, recorded migrations are skipped, and the pg_cron step is now best-effort. If it
+  reports pg_cron "NOT usable", 0004 lands with a notice instead of the jobs; enable pg_cron in the
+  dashboard (Database → Extensions) and run `scripts/provision-supabase.sh --schedule` once.
 - **Schema already applied by hand** (steps 4–5 below)? The history is empty, so the script stops
   before re-running `0001`; `SUPABASE_ASSUME_APPLIED=1` records the migration files as applied without
   running them.

@@ -8,10 +8,12 @@
    Empty SUPABASE values mean "no backend": the page serves
    assets/data/courts.json, keeps reports on this device, says so in the
    sidebar, and hides the pickups features.
+
+   Written by scripts/provision-supabase.sh; GOOGLE_MAP_ID and METRO are kept across runs.
    ============================================================ */
 window.OPENCOURT_CONFIG = {
-  SUPABASE_URL: '',        // e.g. 'https://abcd1234.supabase.co'
-  SUPABASE_ANON_KEY: '',   // the project's anon / publishable key
+  SUPABASE_URL: 'https://sthveiqfuuyfyojrhhmu.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0aHZlaXFmdXV5ZnlvanJoaG11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMzQ5OTQsImV4cCI6MjEwNzkxMDk5NH0.uVJXSpvLY4jZivLMxQoJNYe2UxFMi0MR4UYvyykXN3Q',   // the project's anon / publishable key
   GOOGLE_MAP_ID: '',       // optional: a Map ID enables Advanced Markers (Google then ignores the JSON map style)
   METRO: 'LA'
 };

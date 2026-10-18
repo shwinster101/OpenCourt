@@ -8,6 +8,7 @@
 #   SUPABASE_ACCESS_TOKEN=… scripts/provision-supabase.sh            provision (idempotent: reuse or create)
 #   SUPABASE_ACCESS_TOKEN=… scripts/provision-supabase.sh --check    verify the project and config.js only
 #   SUPABASE_ACCESS_TOKEN=… scripts/provision-supabase.sh --dry-run  print the plan and the calls; GETs only
+#   SUPABASE_ACCESS_TOKEN=… scripts/provision-supabase.sh --schedule re-post 0004 (the pg_cron jobs) after enabling pg_cron in the dashboard
 #
 # Environment (all optional but the token):
 #   SUPABASE_ACCESS_TOKEN   required. Never echoed, never written anywhere; sent to curl through a pipe.
@@ -43,6 +44,7 @@ MODE=provision
 for a in "$@"; do
   case "$a" in
     --check) MODE=check ;;
+    --schedule) MODE=schedule ;;
     --dry-run) MODE=dry-run ;;
     -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 0 ;;
     *) printf 'unknown argument: %s (try --help)\n' "$a" >&2; exit 2 ;;
@@ -141,6 +143,13 @@ sql() {
   must POST "/v1/projects/$REF/database/query" "$body"
   printf '%s' "$HTTP_BODY"
 }
+# try_sql "statement": like sql, but a non-2xx returns 1 instead of stopping the script.
+try_sql() {
+  local body
+  body=$(json_body "query=$1")
+  api POST "/v1/projects/$REF/database/query" "$body" || return 1
+  printf '%s' "$HTTP_BODY"
+}
 # rest PATH KEY: a GET on the project's own REST API with the given apikey; sets HTTP_STATUS/HTTP_BODY.
 rest() {
   local out
@@ -230,14 +239,27 @@ wait_healthy() {
     esac
     svc=''
     if [ "$status" = ACTIVE_HEALTHY ]; then
-      if api GET "/v1/projects/$REF/health?services=db,rest,auth&timeout_ms=5000"; then
-        svc=$(printf '%s' "$HTTP_BODY" | py '" ".join(s["name"] + ":" + s["status"] for s in d)')
-        if [ "$(printf '%s' "$HTTP_BODY" | py 'all(s["status"] == "ACTIVE_HEALTHY" for s in d) and len(d) > 0')" = true ]; then
+      # The health endpoint's parameters have changed under us once (2026-10-18: a 400 on the query
+      # string), so try the documented form, then without timeout_ms, then bare; a 4xx on all three
+      # means the endpoint is not usable from this token and ACTIVE_HEALTHY alone is accepted.
+      local hp ok=0
+      for hp in '?services=db,rest,auth&timeout_ms=5000' '?services=db,rest,auth' ''; do
+        if api GET "/v1/projects/$REF/health$hp"; then ok=1; break; fi
+        case $HTTP_STATUS in 4*) continue ;; *) break ;; esac
+      done
+      if [ $ok = 1 ]; then
+        svc=$(printf '%s' "$HTTP_BODY" | py '" ".join(s["name"] + ":" + s["status"] for s in d) if isinstance(d, list) else "?"')
+        if [ "$(printf '%s' "$HTTP_BODY" | py 'isinstance(d, list) and len(d) > 0 and all(s["status"] == "ACTIVE_HEALTHY" for s in d)')" = true ]; then
           [ $tty = 1 ] && printf '\r%80s\r' ''
           note "healthy: project $status · $svc"
           return 0
         fi
       else
+        case $HTTP_STATUS in
+          4*) [ $tty = 1 ] && printf '\r%80s\r' ''
+              note "healthy: project $status (the health endpoint answered HTTP $HTTP_STATUS to every form; accepted on the project status alone)"
+              return 0 ;;
+        esac
         svc="health HTTP $HTTP_STATUS"
       fi
     fi
@@ -339,6 +361,27 @@ open(out, "w", encoding="utf-8").write(text)' "$1" "$2" "$map_id" "$metro" "$tmp
 for t in curl python3; do command -v "$t" >/dev/null 2>&1 || die "$t is required"; done
 SEED_ROWS=$(seed_rows)
 say "PickUp · Supabase provisioner · mode: $MODE · API: $API_URL"
+
+# ---- --schedule ------------------------------------------------------------------------------------
+# After the owner enables pg_cron in the dashboard: re-post 0004 (cron.schedule upserts by job name, so
+# this is idempotent) and show the jobs. Resolves the project from config.js when it is filled, else by name.
+if [ "$MODE" = schedule ]; then
+  CFG_URL=$(config_value SUPABASE_URL "$CONFIG_OUT")
+  if [[ "$CFG_URL" =~ ^https://([a-z]{20})\.supabase\.co$ ]]; then REF=${BASH_REMATCH[1]}; else resolve_org; find_project >/dev/null; fi
+  [ -n "$REF" ] || die "no project found (config.js is empty and no project named $NAME exists in the organisation)"
+  step 1 "pg_cron on $REF"
+  probe=$(try_sql "select exists(select 1 from pg_extension where extname = 'pg_cron') as installed, has_schema_privilege('cron', 'usage') as usable" 2>/dev/null || printf '[]')
+  if [ "$(printf '%s' "$probe" | py 'bool(isinstance(d, list) and d and d[0].get("installed") and d[0].get("usable"))')" != true ]; then
+    die "pg_cron is not usable yet ($(printf '%s' "$probe" | py 'json.dumps(d[0]) if isinstance(d, list) and d else "no answer"')); enable it in the dashboard (Database → Extensions → pg_cron) and re-run"
+  fi
+  step 2 'post supabase/migrations/0004_schedules.sql'
+  f=$(ls "$ROOT"/supabase/migrations/0004_*.sql | head -1)
+  body=$(json_body "query=@$f"); must POST "/v1/projects/$REF/database/query" "$body" >/dev/null
+  jobs=$(sql "select jobname, schedule from cron.job where jobname like 'pickups-%' order by jobname")
+  note "jobs: $(printf '%s' "$jobs" | py '", ".join("%s (%s)" % (j["jobname"], j["schedule"]) for j in d) if isinstance(d, list) and d else "none"')"
+  [ "$(printf '%s' "$jobs" | py 'len(d) if isinstance(d, list) else 0')" = 3 ] && say 'SCHEDULE DONE' || die 'expected the three pickups-* jobs'
+  exit 0
+fi
 
 # ---- --check ---------------------------------------------------------------------------------------
 if [ "$MODE" = check ]; then
@@ -455,9 +498,23 @@ fi
 note "now: anonymous $(printf '%s' "$HTTP_BODY" | py 'd.get("external_anonymous_users_enabled")') · email $(printf '%s' "$HTTP_BODY" | py 'd.get("external_email_enabled")') · site_url $(printf '%s' "$HTTP_BODY" | py 'd.get("site_url")')"
 
 step 5 "pg_cron (per $PG_CRON_DOC)"
-sql "$PG_CRON_SQL" >/dev/null
-ext=$(sql "select extname, extnamespace::regnamespace::text as schema from pg_extension where extname = 'pg_cron'")
-note "pg_cron: $(printf '%s' "$ext" | py '", ".join("%s in schema %s" % (r.get("extname"), r.get("schema")) for r in d) if isinstance(d, list) and d else "not visible in pg_extension (the query endpoint answered " + json.dumps(d) + ")"')"
+# Each statement on its own and best-effort: the query endpoint runs as postgres, and on 2026-10-18 a
+# privilege error here aborted a real run with the project half-provisioned. 0004 now tolerates a
+# missing or unusable pg_cron (it prints a notice), so this step never stops the run; --schedule
+# re-posts 0004 once the extension is enabled (Dashboard → Database → Extensions → pg_cron).
+cron_ok=0
+if try_sql "create extension if not exists pg_cron with schema pg_catalog" >/dev/null; then :; else
+  note "create extension pg_cron: HTTP $HTTP_STATUS · $(scrub "$(printf '%s' "$HTTP_BODY" | head -c 300)")"
+fi
+try_sql "grant usage on schema cron to postgres" >/dev/null || note "grant usage on schema cron: not permitted from here (fine when the dashboard enabled it)"
+try_sql "grant all privileges on all tables in schema cron to postgres" >/dev/null || true
+probe=$(try_sql "select exists(select 1 from pg_extension where extname = 'pg_cron') as installed, has_schema_privilege('cron', 'usage') as usable" 2>/dev/null || printf '[]')
+if [ "$(printf '%s' "$probe" | py 'bool(isinstance(d, list) and d and d[0].get("installed") and d[0].get("usable"))')" = true ]; then
+  cron_ok=1; note "pg_cron: installed and usable; 0004 will schedule the three jobs"
+else
+  note "pg_cron: NOT usable from the query endpoint ($(printf '%s' "$probe" | py 'json.dumps(d[0]) if isinstance(d, list) and d else "no answer"')). Continuing: 0004 prints a notice instead of scheduling."
+  note "        → enable it in the dashboard (Database → Extensions → pg_cron), then: scripts/provision-supabase.sh --schedule"
+fi
 
 step 6 'migrations in order, then the seed (idempotent: recorded versions are skipped)'
 list=$(applied_list)
