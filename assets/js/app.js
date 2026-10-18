@@ -671,7 +671,24 @@ function selectCourt(id, opts = {}) {
 
   renderPickups(court);
 
+  openDetail();
+}
+
+/* The court panel is a side card on desktop and a bottom sheet on phones (v1.3.3): one open/close
+   pair keeps the backdrop, the body scroll lock and the selection in step. */
+function openDetail() {
   document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('detail-backdrop').classList.add('open');
+  document.body.classList.add('detail-open');
+  const body = document.getElementById('detail-body');
+  if (body) body.scrollTop = 0;
+}
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('detail-backdrop').classList.remove('open');
+  document.body.classList.remove('detail-open');
+  state.selectedId = null;
+  renderAll();
 }
 
 /* ============================================================
@@ -1536,7 +1553,8 @@ function wireSheet() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (topSheet()) { e.preventDefault(); popSheet(); return; }
-    if (state.inboxOpen) { state.inboxOpen = false; renderInbox(); }
+    if (state.inboxOpen) { state.inboxOpen = false; renderInbox(); return; }
+    if (document.getElementById('detail-panel').classList.contains('open')) closeDetail();
   });
 }
 
@@ -1735,11 +1753,8 @@ async function openSharedPickup() {
    EVENT WIRING
    ============================================================ */
 function wireEvents() {
-  document.getElementById('detail-close').addEventListener('click', () => {
-    document.getElementById('detail-panel').classList.remove('open');
-    state.selectedId = null;
-    renderAll();
-  });
+  document.getElementById('detail-close').addEventListener('click', closeDetail);
+  document.getElementById('detail-backdrop').addEventListener('click', closeDetail);
 
   document.querySelectorAll('.chip').forEach(chip => {
     chip.addEventListener('click', () => {

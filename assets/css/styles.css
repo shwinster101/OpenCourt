@@ -561,6 +561,14 @@ header {
   flex-shrink: 0;
 }
 
+.detail-grip {
+  display: none; width: 40px; height: 4px; border-radius: 2px;
+  background: rgba(244, 239, 230, 0.35); margin: -8px auto 10px;
+}
+.detail-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1090;
+  background: rgba(10, 22, 34, 0.35);
+}
 .detail-close {
   position: absolute;
   top: 14px; right: 14px;
@@ -934,10 +942,23 @@ header {
     grid-template-areas: "header" "map" "sidebar";
   }
   .sidebar { border-right: none; border-top: 1px solid var(--border); }
+  /* v1.3.3: on phones the court panel is a bottom sheet over the whole viewport, not a card inside the
+     40vh map box (where its header and ✕ sat above the visible area and the page scrolled it away). */
   .detail-panel {
-    top: auto; bottom: 24px; right: 12px; left: 12px;
-    width: auto; max-height: 80vh;
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0;
+    width: auto; max-height: 86vh; max-height: 86dvh;
+    border-radius: 16px 16px 0 0; border-bottom: none;
+    z-index: 1100;
+    transform: translateY(110%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.32, 1);
   }
+  .detail-panel.open { transform: translateY(0); }
+  .detail-header { padding-top: 22px; }
+  .detail-grip { display: block; }
+  .detail-close { top: 18px; right: 14px; width: 32px; height: 32px; font-size: 20px; }
+  .detail-body { padding-bottom: calc(18px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+  .detail-backdrop.open { display: block; }
+  body.detail-open { overflow: hidden; }
   .brand-tag { display: none; }
   .brand-logo { height: 28px; }
   .brand-sub .brand-mark { font-size: 13px; }
