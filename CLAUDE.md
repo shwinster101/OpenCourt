@@ -43,6 +43,14 @@ the same evening, "open the PR for the marker fix (let's go with the OverlayView
   intermittent to 3/3); the v1.2.0 working note's own prose tripped the secret scan at `daa9ea0` (reworded);
   the realtime migration was numbered 0006 with no 0005 (renumbered; the provisioner test derives its
   expected list from the folder).
+- **Reviewed adversarially before merge** (three lenses, two refuters per serious finding, one fixer, an
+  independent re-run): a real regression was caught — the phone-width header fix clipped the inbox
+  dropdown, so a signed-in player saw the badge but never the list (the inbox is now fixed-positioned);
+  the stand-in's SQL-error status mapping now mirrors PostgREST case for case; twelve small findings
+  fixed (the court panel's Cancel is two-tap armed and no native dialog remains; the bell closes an
+  open sheet; badge counts reach screen readers; Sign out is this device only; a dead share link says
+  so; an unassigned roster player is named before a result is saved). Recorded, not changed: the share
+  token travels in the realtime stream and is a convenience, not a secret (ruling in the conventions).
 - **Gate:** `sh scripts/check.sh --backend` → GATE PASSED, **182 assertions** (t_040 realtime adds 15).
   Browser checks run on `http://localhost:8000`, the only local origin the Maps key's referrer list allows.
 - **The Maps key (owner's console, 2026-10-17 screenshots):** referrers and the API restriction are right.

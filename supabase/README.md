@@ -78,5 +78,6 @@ scripts/provision-supabase.sh --check   # project healthy · config.js holds the
 `Backend.linkEmail(email)` calls `auth.updateUser({ email })` on the anonymous session: the user
 id does not change, so reports, profile and pickups follow the player. Supabase sends a
 confirmation email; once confirmed the user is no longer anonymous and `profiles.is_anonymous`
-is refreshed on the next `upsert_profile`. The page does not expose this yet; it is the first
-item of M4's delivery work.
+is refreshed on the next `upsert_profile`. On the page this is the profile sheet's **Keep this
+account** row (tap your name in the header; v1.3.0); **Played before? Sign in** beside it is the
+magic link for a returning player, which never creates an account.

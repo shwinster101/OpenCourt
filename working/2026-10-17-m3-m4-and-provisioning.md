@@ -158,9 +158,48 @@ before commit (§Verification).
 provisioning, realtime delivery, the Keep-this-account and magic-link round trips, the two-browser proof on
 the real project. The Maps billing fix is the owner's.
 
-## Review
+## Review (after the build and the lead's fixes; the worker quota reset at 01:40 UTC, so this ran as a resume)
 
-_pending the review panel's result_
+Three lenses read the whole change set against the SQL (security and RLS alignment · honest signals and
+the owner's product rules · correctness); every blocker/major was handed to two independent refuters;
+one fixer applied what survived; an independent runner re-ran every gate.
+
+| Lens | Findings | Of which blocker/major |
+|---|---|---|
+| security / RLS | 3 | 0 |
+| honesty / product | 6 | 1 |
+| correctness | 9 | 1 |
+
+**Confirmed (both refuters agreed) and fixed:**
+1. **The inbox was clipped** — `header { overflow: hidden }`, added for the phone-width header, cut the
+   inbox dropdown off: a signed-in player saw the badge but never the notifications. A v1.2.0 feature
+   regressed by v1.3.0, caught before merge. `.inbox` is now fixed-positioned; `check-backend.cjs` asserts
+   the dropdown is the element under the pointer at 1280px and 390px.
+2. **The stand-in's error status mapping** sent `P0002` (not-found paths) as 400 and deadlocks as 409,
+   where PostgREST answers 500; a smoke assertion passed locally that would fail on Supabase. The mapping
+   now mirrors PostgREST v12.2.3 case for case (the page is unaffected: it reads the message).
+
+**Minor, fixed in the same pass:** the local page server binds 127.0.0.1; the court panel's Cancel is
+two-tap armed and the inbox's `alert()` is gone (no native dialog remains, so the v1.3.0 sentence is
+true); the bell closes an open sheet first; `#inbox-btn` / `#friends-btn` carry their counts in
+`aria-label`; the polling tooltip names both cadences; the court-panel account copy shortened; the
+provisioner's hand-applied message derives its range from the folder; the backend README points at the
+Keep-this-account row; two-browsers step 3 compares the uncapped `recent_report_count` (it could pass
+vacuously at five reports); a result or vote entered from the inbox opens Mine so its flash is seen;
+Mine offers Cancel beside Enter result; a dead share link reads in `#auth-notice`; `signOut({ scope:
+'local' })`; a result with unassigned roster players warns once before saving.
+
+**Recorded, not changed:** `pickups.share_token` (and `organiser_id`, `mvp_id`) travel in the realtime
+stream to anonymous subscribers, as they already did through the `anon` table grant in 0002. Ruling in
+`docs/project-conventions.md`: the token is a convenience, not a secret; a column-level grant can hide it
+later. **Owner's call:** whether the not-found paths (`P0002` in 0001–0003) should be re-raised with a
+code Supabase logs as a 4xx (a new migration), and whether the provisioner should probe each object
+before re-applying an unrecorded file after a half-recorded run.
+
+**Independent re-run after the fixes:** GATE PASSED, 182 assertions; offline check 20 pins; fake-backend
+check `errors: []` with the new inbox-visibility, bell-over-sheet and two-tap-Cancel assertions;
+provisioner 40; stand-in smoke 44; two browsers 16/16 across two runs. The lead re-checked syntax and the
+plain gate before committing.
 
 ## Follow-ups
 
@@ -181,3 +220,19 @@ _pending the review panel's result_
 **Next passes:** M4 part two (push via an edge function, share cards, "I'm here, need a 4th"); set
 scores on closed pickups and an editable skill in the You sheet; the README/SETUP placeholder URLs; a Pages
 `_site/` artifact so `test/`, `working/` and `supabase/` stop being served; the visible rename.
+
+## Outcomes
+
+- `c70b7c7` — v1.3.0 build: M3 screens, M4 part one, the provisioner, the local stand-in and the
+  two-browser proof, the three lead fixes, the docs. Gate at that commit: GATE PASSED, 182 assertions;
+  two-browsers 8/8 ×3.
+- The commit after it — the review panel's fixes (the clipped inbox and the stand-in's status mapping,
+  plus twelve minors), the share-token ruling, this section. Gate re-run green by an independent worker
+  and by the lead.
+- PR #1 (`shwinster101/OpenCourt`) carries both; its Cloudflare Pages check is green and the branch
+  preview is `claude-pickup-opencourt-migr.opencourt.pages.dev`.
+- What the plan got wrong, kept beside the text: the M4 worker numbered its migration 0006 (the lead's
+  brief had reserved 0005 for an M3 migration that proved unnecessary); the two-browser step 8 was
+  intermittent because the deep-link highlight was consumed by the first render; the lead's own v1.2.0
+  note tripped the gate he had just tightened; the phone-width header fix clipped the inbox until the
+  review caught it.

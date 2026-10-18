@@ -71,7 +71,9 @@ start() {
   fi
 
   echo "== page on http://127.0.0.1:$OC_PAGE_PORT"
-  python3 -m http.server "$OC_PAGE_PORT" --directory "$ROOT" >/dev/null 2>&1 &
+  # Loopback only: the directory served is the repository root (.git/, working/ included), and the
+  # backend and the proof address 127.0.0.1 anyway; http.server would otherwise bind every interface.
+  python3 -m http.server "$OC_PAGE_PORT" --bind 127.0.0.1 --directory "$ROOT" >/dev/null 2>&1 &
   echo $! > "$STACK/page.pid"
   if ! wait_http "http://127.0.0.1:$OC_PAGE_PORT/index.html" 50; then
     echo "local-stack: the page server did not answer on $OC_PAGE_PORT" >&2; stop; exit 1

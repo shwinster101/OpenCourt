@@ -35,8 +35,9 @@ PostgREST subset:
          Accept: application/vnd.pgrst.object+json → one object or 406 PGRST116; Prefer: count=exact → Content-Range total
     POST /rest/v1/rpc/<fn>  JSON object of named arguments → json_to_record(...) typed from pg_proc, then
          select public.<fn>(name => value, ...): setof → array, composite → object, scalar → bare value, void → 204
-    SQL errors → {"code": sqlstate, "message", "details", "hint"}: 42501 → 403 (401 when anon), P0001 and other → 400,
-         PT<nnn> → nnn, 42P01/42883 → 404, 23503/23505 → 409 (as PostgREST maps them).
+    SQL errors → {"code": sqlstate, "message", "details", "hint"}: 42501 → 403 (401 when anon), P0001 → 400,
+         every other P0* (P0002 unknown_pickup/no_request …) → 500, PT<nnn> → nnn, 42P01/42883 → 404,
+         23503/23505 → 409, 40* → 500 (exactly as PostgREST v12.2.3 maps them; see pg_status_for).
 Not served: inserts/updates/deletes on tables (the page writes only through RPC), realtime websockets,
 storage, mail. One log line per request goes to stderr (method, path, role, status, ms); never a token.
 
@@ -120,20 +121,36 @@ def gotrue_error(status, error_code, msg):
 
 
 def pg_status_for(sqlstate, authenticated):
-    """PostgREST's mapping of SQLSTATEs to HTTP statuses (the part that matters here)."""
+    """PostgREST's mapping of SQLSTATEs to HTTP statuses, mirrored case for case from pgErrorStatus in
+    src/PostgREST/Error.hs at v12.2.3 (https://github.com/PostgREST/postgrest/blob/v12.2.3/src/PostgREST/Error.hs).
+    The one that bites this schema: only P0001 (a bare `raise exception`) is 400; every other P0* —
+    the migrations' `errcode = 'P0002'` for unknown_pickup, no_request, not_friends … — is 500 on
+    Supabase, and the page reads the message, never the status (backend.js wrap()). Any divergence here
+    is a bug in the stand-in, never a feature of the page."""
+    exact = {
+        '23503': 409, '23505': 409,        # foreign_key_violation, unique_violation
+        '25006': 405,                      # read_only_sql_transaction
+        '21000': 500,                      # cardinality_violation (pg-safeupdate's 400 special case not modelled)
+        '53400': 500,                      # config limit exceeded
+        '57P01': 503,                      # terminating connection due to administrator command
+        'P0001': 400,                      # default code for "raise"
+        '42883': 404,                      # undefined function (xmlagg's 406 special case not modelled)
+        '42P01': 404,                      # undefined table
+        '42P17': 500,                      # infinite recursion
+    }
+    if sqlstate in exact:
+        return exact[sqlstate]
     if sqlstate == '42501':
         return 403 if authenticated else 401
-    if sqlstate in ('42P01', '42883'):
-        return 404
-    if sqlstate in ('23503', '23505', '40001', '40P01'):
-        return 409
     if sqlstate.startswith('PT') and sqlstate[2:].isdigit():
         return int(sqlstate[2:])
-    if sqlstate[:2] in ('08', '53', '57'):
-        return 503
-    if sqlstate[:2] in ('XX', 'P0') and sqlstate != 'P0001' and sqlstate != 'P0002' and sqlstate != 'P0003' and sqlstate != 'P0004':
-        return 500
-    return 400
+    prefix = {
+        '08': 503, '09': 500, '0L': 403, '0P': 403,
+        '25': 500, '28': 403, '2D': 500, '38': 500, '39': 500, '3B': 500, '40': 500,
+        '53': 503, '54': 500, '55': 500, '57': 500, '58': 500, 'F0': 500, 'HV': 500,
+        'P0': 500, 'XX': 500,
+    }
+    return prefix.get(sqlstate[:2], 400)
 
 
 # ---------------------------------------------------------------------------------------------

@@ -41,6 +41,10 @@ so we don't need a Map ID)".
   sessions because it would lose the profile.
 - **Destructive taps are two-tap armed** (Cancel, Leave, Remove, Sign out): the first tap says "Sure?" and
   sends nothing. No native confirm dialogs.
+- **The share token is a convenience, not a secret.** `pickups.share_token` opens a court panel with
+  that pickup highlighted and grants nothing else (joining still needs a session, a profile and a free
+  spot). The 2021-style `anon` select on `pickups` (0002) and the realtime publication (0005) therefore
+  carry it; a column-level grant can hide it later without changing the page (review finding, 2026-10-18).
 - **Standing is readable by any signed-in player** (`player_standing` is granted to `authenticated` with no
   row filter), which a leaderboard will want; the owner may tighten it in one grant.
 - **Provisioning is a script, not a checklist:** `scripts/provision-supabase.sh`, written from the

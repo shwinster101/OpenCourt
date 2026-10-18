@@ -172,7 +172,7 @@ req POST '/rest/v1/rpc/friend_status' "$T1" "{\"p_other\":\"$U2\"}"
 req POST '/rest/v1/rpc/my_friends' "$T1" '{}'
 [ "$STATUS" = 200 ] && [ "$(body)" = '[]' ]; check "POST rpc/my_friends {} (setof profiles, no arguments) → []" $? "status=$STATUS $(body)"
 req POST '/rest/v1/rpc/accept_friend_request' "$T1" "{\"p_requester\":\"$U2\"}"
-[ "$STATUS" = 400 ] && [ "$(py 'd["message"]')" = no_request ]; check "accept_friend_request with no request → 400 no_request (void function path)" $? "status=$STATUS $(head -c 160 "$WORK/body")"
+[ "$STATUS" = 500 ] && [ "$(py 'd["message"]')" = no_request ] && [ "$(py 'd["code"]')" = P0002 ]; check "accept_friend_request with no request → 500 P0002 no_request (PostgREST maps every P0* but P0001 to 500; void function path)" $? "status=$STATUS $(head -c 160 "$WORK/body")"
 req POST '/rest/v1/rpc/leave_pickup' "$T2" "{\"p_pickup_id\":\"$PICKUP\"}"
 [ "$STATUS" = 204 ] && [ ! -s "$WORK/body" ]; check "second user leave_pickup → 204 (void)" $? "status=$STATUS $(body)"
 req GET "/rest/v1/profiles?select=id,username,display_name,skill&id=in.($U1,$U2)&order=username.asc" "$T2"

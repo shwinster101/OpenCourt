@@ -1037,14 +1037,17 @@ header {
   border-radius: 999px; background: var(--status-full); color: #fff;
   font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 18px; text-align: center;
 }
+/* Fixed, not absolute: the header clips its overflow (below), and a fixed box escapes that clip the
+   way .sheet does, so the dropdown stays visible under the bell at every width. */
 .inbox {
-  display: none; position: absolute; right: 16px; top: 60px; z-index: 1200;
+  display: none; position: fixed; right: 16px; top: 64px; z-index: 1200;
   width: min(360px, calc(100vw - 32px)); max-height: 60vh; overflow: auto;
   background: var(--paper); border: 1px solid var(--border); border-radius: 12px;
   box-shadow: 0 12px 32px var(--shadow); padding: 8px;
 }
 .inbox.open { display: block; }
 .inbox-empty { font-size: 12px; color: var(--ink-mute); padding: 12px; }
+.inbox-empty.error { color: var(--status-full); }
 .inbox-item { padding: 10px; border-bottom: 1px solid var(--border); display: grid; gap: 6px; }
 .inbox-item:last-of-type { border-bottom: none; }
 .inbox-text { font-size: 12.5px; color: var(--ink); }
@@ -1206,7 +1209,8 @@ header { position: relative; }
 .stand-formula { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ink-soft); padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--paper-dark); }
 
 /* The header is a grid item: without min-width: 0 its content (brand, pills, buttons) sizes the
-   whole column, and at phone width the page used to grow past the viewport and get clipped. */
+   whole column, and at phone width the page used to grow past the viewport and get clipped. The
+   overflow clip never reaches #inbox, which is position: fixed (above). */
 header { min-width: 0; overflow: hidden; }
 .header-right { min-width: 0; flex-shrink: 1; }
 .header-right > * { flex-shrink: 0; }

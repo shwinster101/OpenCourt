@@ -102,9 +102,12 @@ required argument is `404 PGRST202`. The answer follows the function's declared 
 
 SQL errors are `{"code": <sqlstate>, "message", "details", "hint"}`; `backend.js`'s `wrap()` reads
 `message` (the `raise exception 'rate_limited'` names). Status by SQLSTATE as PostgREST maps it:
-`42501` → **403**, or **401** when the caller is anon; `P0001`, `P0002`, `22023`, `42703` and the rest →
-400; `23503`/`23505` → 409; `42P01`/`42883` → 404; `PT<nnn>` → nnn; unknown relation → `404
-PGRST205`; invalid or expired JWT → `401 PGRST301`.
+`42501` → **403**, or **401** when the caller is anon; `P0001` (a bare `raise exception`), `22023`, `42703`
+and the rest → 400; **every other `P0*` → 500** (the migrations' `errcode = 'P0002'` for `unknown_pickup`,
+`no_request`, `not_friends` … answers 500 on Supabase too, with the name in `message`, which is all the
+page reads); `23503`/`23505` → 409; `40*` → 500; `42P01`/`42883` → 404; `PT<nnn>` → nnn; unknown relation
+→ `404 PGRST205`; invalid or expired JWT → `401 PGRST301`. The table is `pg_status_for` in
+`local-backend.py`, mirrored from PostgREST v12.2.3's `pgErrorStatus`.
 
 Grants decide what anon sees, from the migrations: `courts_live`, `open_pickups`, `pickups`,
 `pickup_teams` and `pickup_by_token()` answer anon; `my_notifications`, `my_pickups`, `profiles`,

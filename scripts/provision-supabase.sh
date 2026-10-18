@@ -465,7 +465,9 @@ note "history: $(printf '%s' "$list" | py 'len(d)') recorded"
 if [ "$(printf '%s' "$list" | py 'len(d)')" = 0 ] && [ "${SUPABASE_ASSUME_APPLIED:-}" != 1 ]; then
   exists=$(sql "select exists(select 1 from pg_tables where schemaname = 'public' and tablename = 'courts') as exists")
   if [ "$(printf '%s' "$exists" | py 'bool(d and d[0].get("exists"))')" = true ]; then
-    die "public.courts exists but the migration history is empty (applied by hand per the README?). Re-run with SUPABASE_ASSUME_APPLIED=1 to record 0001–0004 as applied without running them."
+    first=$(ls "$ROOT"/supabase/migrations/*.sql | head -1 | xargs -n1 basename | sed 's/_.*//')
+    last=$(ls "$ROOT"/supabase/migrations/*.sql | tail -1 | xargs -n1 basename | sed 's/_.*//')
+    die "public.courts exists but the migration history is empty (applied by hand per the README?). Re-run with SUPABASE_ASSUME_APPLIED=1 to record every file in supabase/migrations/ ($first–$last) as applied without running them."
   fi
 fi
 applied=0

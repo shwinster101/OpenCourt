@@ -23,6 +23,8 @@ async function newPage(browser, realtime, errors) {
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(String(e).slice(0, 200)));
   page.on('console', m => { if (m.type() === 'error' && !/Map ID|Google Maps/.test(m.text())) errors.push('console: ' + m.text().slice(0, 160)); });
+  // No native dialogs anywhere on the page (project-conventions, v1.3.0): one is an error, not a no-op.
+  page.on('dialog', d => { errors.push('native dialog: ' + d.type() + ' ' + d.message().slice(0, 100)); d.dismiss().catch(() => {}); });
   return { ctx, page };
 }
 
@@ -79,6 +81,18 @@ const channels = (page) => page.evaluate(() => window.__fake.channels.map(c => (
   await page.click('#inbox-btn');
   await page.waitForTimeout(300);
   out.inbox = await page.evaluate(() => ({ open: document.getElementById('inbox').classList.contains('open'), items: document.querySelectorAll('.inbox-item').length, text: (document.querySelector('.inbox-text') || {}).textContent }));
+  // The dropdown must be the element under the pointer, not merely .open: the header clips its overflow,
+  // and a clipped inbox would show the badge and never the notifications. Checked at desktop and phone width.
+  const inboxVisible = () => page.evaluate(() => {
+    const box = document.getElementById('inbox'); const item = document.querySelector('.inbox-item') || box;
+    const r = item.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 20));
+    return { top: Math.round(r.top), height: Math.round(r.height), hitInsideInbox: !!(hit && box.contains(hit)), hit: hit ? (hit.id || hit.className) : null };
+  });
+  out.inbox.visible1280 = await inboxVisible();
+  await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(250);
+  out.inbox.visible390 = await inboxVisible();
+  await page.setViewportSize({ width: 1280, height: 800 }); await page.waitForTimeout(250);
+  for (const w of ['1280', '390']) if (!out.inbox['visible' + w].hitInsideInbox) errors.push(`inbox dropdown is not under the pointer at ${w}px (clipped or covered): ` + JSON.stringify(out.inbox['visible' + w]));
 
   // ---- M4: a pushed event refreshes the inbox and the court panel; no poll is due for minutes ----
   const snap = () => page.evaluate(() => ({ inboxCount: document.getElementById('inbox-count').textContent, inboxItems: document.querySelectorAll('.inbox-item').length,
@@ -101,6 +115,17 @@ const channels = (page) => page.evaluate(() => window.__fake.channels.map(c => (
     inboxClosed: !document.getElementById('inbox').classList.contains('open'),
     rows: Array.from(document.querySelectorAll('.mine-row')).map(r => ({ id: r.dataset.pickup, chip: r.querySelector('.st-chip').textContent, action: Array.from(r.querySelectorAll('.pickup-btns button, .pickup-btns span')).map(b => b.textContent.trim()).join(' | ') }))
   })));
+  // One header layer at a time: with Mine open, the bell closes the sheet and opens the inbox on top;
+  // Escape then closes the inbox (the layer the player sees), and Mine reopens for the steps below.
+  await page.click('#inbox-btn');
+  await page.waitForTimeout(250);
+  out.bellOverSheet = Object.assign(await sheet(), { inboxOpen: await page.evaluate(() => document.getElementById('inbox').classList.contains('open')), inbox: await inboxVisible() });
+  if (out.bellOverSheet.open || !out.bellOverSheet.inboxOpen || !out.bellOverSheet.inbox.hitInsideInbox) errors.push('the bell did not replace the open sheet with a visible inbox: ' + JSON.stringify(out.bellOverSheet));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  out.bellOverSheet.escapeClosedInbox = await page.evaluate(() => !document.getElementById('inbox').classList.contains('open'));
+  await page.click('#mine-btn');
+  await page.waitForTimeout(600);
   // Enter result on the in-progress pickup I organise: me → T1, bsmith → T2, sets, winner 1
   await page.click('.mine-row[data-pickup="p-live"] [data-act="result"]');
   await page.waitForTimeout(500);
@@ -227,6 +252,22 @@ const channels = (page) => page.evaluate(() => window.__fake.channels.map(c => (
     await p2.waitForTimeout(1000);
     r.afterJoin = await dataSource(p2);
     r.afterJoinChannels = await channels(p2);
+    // The court panel's Cancel is two-tap armed like Mine's: the first tap reads "Sure?" and sends nothing;
+    // the second sends cancel_pickup once. No native confirm (a dialog would land in `errors` above).
+    await p2.click('#pickup-new');
+    await p2.waitForTimeout(300);
+    await p2.click('#pickup-form button[type=submit]');
+    await p2.waitForTimeout(800);
+    const cancelSel = '#pickups-list .pk-btn[data-act="cancel"]';
+    const cancelCalls = () => p2.evaluate(() => window.__fake.calls.filter(c => c.startsWith('rpc:cancel_pickup')).length);
+    r.cancelBefore = { label: await p2.evaluate((s) => (document.querySelector(s) || {}).textContent, cancelSel), calls: await cancelCalls() };
+    await p2.click(cancelSel);
+    await p2.waitForTimeout(250);
+    r.cancelArmed = { label: await p2.evaluate((s) => (document.querySelector(s) || {}).textContent, cancelSel), sure: await p2.evaluate((s) => (document.querySelector(s) || { dataset: {} }).dataset.sure || null, cancelSel), calls: await cancelCalls() };
+    await p2.click(cancelSel);
+    await p2.waitForTimeout(700);
+    r.cancelSent = { calls: await cancelCalls(), feedback: await p2.evaluate(() => document.getElementById('pickup-feedback').textContent) };
+    if (r.cancelBefore.label !== 'Cancel' || r.cancelArmed.label !== 'Sure?' || r.cancelArmed.calls !== 0 || r.cancelSent.calls !== 1 || r.cancelSent.feedback !== 'Pickup cancelled.') errors.push('court-panel Cancel is not two-tap armed: ' + JSON.stringify({ before: r.cancelBefore, armed: r.cancelArmed, sent: r.cancelSent }));
     const polls0 = await calls(p2, /^from:my_notifications$/);
     const courts0 = await calls(p2, /^from:courts_live$/);
     await p2.clock.runFor(61000);

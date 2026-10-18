@@ -8,8 +8,9 @@
 //   1. A loads; #data-source reads "Shared data"; the court list has 20 rows.
 //   2. A opens OC_COURT and taps the "Open" report button; the feedback says it was shared; the status
 //      source reads the live wording.
-//   3. B loads fresh and opens the same court: the live wording, and the report count/age reflect A's
-//      report (B never reported).
+//   3. B loads fresh and opens the same court: the live wording, the age, and courts_live's uncapped
+//      recent_report_count is exactly one more than A saw before its tap (the panel's own count tops out
+//      at 5, so it alone cannot prove A's report landed on a busy court); B never reported.
 //   4. A starts a pickup there (profile prompt → unique name → create with a note); the row carries A's name.
 //   5. B reloads, opens the court: A's pickup row is there; B taps Join (profile prompt, its own name);
 //      the row reads 2 joined.
@@ -142,6 +143,13 @@ const detail = (page) => page.evaluate(() => {
   return { open: document.getElementById('detail-panel').classList.contains('open'), name: q('#detail-name'), label: q('.detail-status-label'), note: q('.detail-status-note'), source: q('.detail-status-source'), reports: row ? row.querySelector('.detail-val').textContent.trim() : null };
 });
 const reportCount = (txt) => { if (txt === 'None yet') return 0; const m = /^(\d+) in the last 90 min$/.exec(txt || ''); return m ? Number(m[1]) : NaN; };
+// courts_live.recent_report_count for one court, read through the page's own client (uncapped, unlike the
+// live_reports array behind the panel's "Recent reports" row, which courts_live limits to 5).
+const recentCount = (page, id) => page.evaluate(async (cid) => {
+  const rows = await window.Backend.fetchCourts();
+  const c = (rows || []).find(r => r.id === cid);
+  return c ? c.recent_report_count : null;
+}, id);
 
 async function openCourt(page) {
   await page.click(`.court-item[data-id="${COURT_ID}"]`);
@@ -225,7 +233,8 @@ async function step(n, name, needs, fn) {
   const B = await newBrowser(browser, 'B');
   browsers = { A, B };
 
-  let reportsBefore = NaN;   // A's "Recent reports" count before it reports
+  let reportsBefore = NaN;   // A's "Recent reports" count before it reports (the panel, capped at 5)
+  let recentBefore = null;   // courts_live.recent_report_count before A reports (uncapped)
   let pickupId = null;
   let shareLink = null;
 
@@ -240,24 +249,26 @@ async function step(n, name, needs, fn) {
     const before = await openCourt(A.page);
     reportsBefore = reportCount(before.reports);
     if (Number.isNaN(reportsBefore)) throw new Error(`"Recent reports" reads "${before.reports}"`);
+    recentBefore = await recentCount(A.page, COURT_ID);
+    if (typeof recentBefore !== 'number') throw new Error(`courts_live.recent_report_count for ${COURT_ID} reads ${JSON.stringify(recentBefore)}`);
     await A.page.click('.report-btn[data-status="open"]');
     const fb = await waitFlash(A.page, 'report-feedback');
     if (fb !== REPORT_SHARED) throw new Error(`feedback reads "${fb}" (expected "${REPORT_SHARED}")`);
     await waitFor(A.page, (want) => { const el = document.querySelector('.detail-status-source'); return !!el && el.textContent.trim() === want; }, LIVE_SOURCE, `status source "${LIVE_SOURCE}"`);
     const d = await detail(A.page);
-    return `"${fb}" · ${d.source} · ${d.label} · ${d.note} · before the tap: Recent reports "${before.reports}"`;
+    return `"${fb}" · ${d.source} · ${d.label} · ${d.note} · before the tap: Recent reports "${before.reports}", recent_report_count ${recentBefore}`;
   });
 
   await step(3, "B loads fresh · the same court shows A's report as live", [2], async () => {
     const src = await load(B.page, PAGE_URL);
     const d = await openCourt(B.page);
-    const want = Math.min(reportsBefore + 1, 5);   // courts_live carries at most 5 recent reports
-    const got = reportCount(d.reports);
+    const recent = await recentCount(B.page, COURT_ID);          // uncapped: A's one report, exactly
+    const got = reportCount(d.reports);                           // the panel: the same view, capped at 5
     const ageOk = /^Reported \d+ min ago by a player on the ground\.$/.test(d.note || '');
-    if (d.source !== LIVE_SOURCE || d.label !== 'Likely open' || !ageOk || got !== want) {
-      throw new Error(`#data-source "${src}" · source "${d.source}" · label "${d.label}" · note "${d.note}" · Recent reports "${d.reports}" (expected ${want}: A saw ${reportsBefore} before reporting, B reported nothing)`);
+    if (d.source !== LIVE_SOURCE || d.label !== 'Likely open' || !ageOk || recent !== recentBefore + 1 || got !== Math.min(recent, 5)) {
+      throw new Error(`#data-source "${src}" · source "${d.source}" · label "${d.label}" · note "${d.note}" · recent_report_count ${recent} (expected ${recentBefore + 1}: A read ${recentBefore} before reporting, B reported nothing) · Recent reports "${d.reports}" (expected ${Math.min(recent, 5)})`);
     }
-    return `#data-source "${src}" · ${d.source} · ${d.label} · ${d.note} · Recent reports "${d.reports}" (A saw ${reportsBefore} before its tap; B reported nothing)`;
+    return `#data-source "${src}" · ${d.source} · ${d.label} · ${d.note} · recent_report_count ${recentBefore} → ${recent} · Recent reports "${d.reports}" (B reported nothing)`;
   });
 
   await step(4, "A starts a pickup (profile prompt → create with a note) · the row carries A's name", [2], async () => {

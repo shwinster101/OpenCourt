@@ -144,8 +144,10 @@
     return true;
   }
 
+  // This device only: supabase-js 2.45.4 defaults signOut to scope 'global' (every device's refresh
+  // tokens revoked); the row reads plainly "Sign out", so it signs out here and nowhere else.
   async function signOut() {
-    await sb().auth.signOut();
+    await sb().auth.signOut({ scope: 'local' });
     session = null; profile = null;
   }
 

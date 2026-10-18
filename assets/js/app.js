@@ -146,9 +146,10 @@ function renderDataSource() {
   el.dataset.source = state.dataSource;
   el.dataset.live = liveNow ? '1' : '0';
   el.dataset.poll = live() && state.rt.inboxEvery ? String(state.rt.inboxEvery / 1000) : '';
-  // One tap deep: what "live" covers. Reports are not in the publication (0005), so they stay on the 5-minute read.
+  // One tap deep: what "live" covers. Reports are not in the publication (0005), so they stay on the 5-minute
+  // read either way; polling names both cadences (the inbox every minute until setPolling runs, inboxEvery 0).
   el.title = liveNow ? 'Pickups and your inbox arrive as they happen · reports refresh every 5 min'
-    : live() ? `Checks for updates every ${state.rt.inboxEvery >= 300000 ? '5 min' : 'minute'}` : '';
+    : live() ? `Inbox every ${state.rt.inboxEvery >= 300000 ? '5 min' : 'minute'} · reports every 5 min` : '';
 }
 
 /* ============================================================
@@ -694,31 +695,34 @@ async function renderPickups(court) {
     state.mine = {};
     mine.forEach(m => { state.mine[m.id] = m; });
     court.open_pickup_count = rows.length;
-
-    if (rows.length === 0) {
-      list.innerHTML = `<div class="pickups-empty">No pickup on this court yet.</div>`;
-    } else {
-      list.innerHTML = rows.map(p => pickupRow(p)).join('');
-    }
+    paintPickupRows(court);
     // A realtime event or an auth refresh re-renders this block while the visitor may be filling
     // in a form (name, new pickup, sign-in): the old slot element is re-attached, listeners intact.
     const prevSlot = document.getElementById('pickup-form-slot');
     actions.innerHTML = `<button class="pickup-new-btn" id="pickup-new">+ Start a pickup here</button>`;
     actions.appendChild(prevSlot && prevSlot.childElementCount ? prevSlot : Object.assign(document.createElement('div'), { id: 'pickup-form-slot' }));
     document.getElementById('pickup-new').addEventListener('click', () => showPickupForm(court));
-    wirePickupButtons(court);
-    // The share-link highlight is re-applied on every render of this court (a realtime event or an
-    // auth refresh rebuilds the rows); it is dropped only when another court is opened. Scroll once.
-    if (state.highlightPickup) {
-      const el = list.querySelector(`[data-pickup="${state.highlightPickup}"]`);
-      if (el) {
-        el.classList.add('highlight');
-        if (!state.highlightShown) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); state.highlightShown = true; }
-      }
-    }
   } catch (err) {
     list.innerHTML = `<div class="pickups-empty error">${esc(err.message || 'Could not load pickups.')}</div>`;
     actions.innerHTML = '';
+  }
+}
+
+// The rows of the open court from state.pickups, buttons wired; no read. Also run when a two-tap
+// button arms. The share-link highlight is re-applied on every paint of this court (a realtime event
+// or an auth refresh rebuilds the rows); it is dropped only when another court is opened. Scroll once.
+function paintPickupRows(court) {
+  const list = document.getElementById('pickups-list');
+  if (!list) return;
+  const rows = state.pickups[court.id] || [];
+  list.innerHTML = rows.length ? rows.map(p => pickupRow(p)).join('') : `<div class="pickups-empty">No pickup on this court yet.</div>`;
+  wirePickupButtons(court);
+  if (state.highlightPickup) {
+    const el = list.querySelector(`[data-pickup="${state.highlightPickup}"]`);
+    if (el) {
+      el.classList.add('highlight');
+      if (!state.highlightShown) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); state.highlightShown = true; }
+    }
   }
 }
 
@@ -731,7 +735,7 @@ function pickupRow(p) {
   if (myStatus === 'owner') {
     btns = (open ? `<button class="pk-btn ghost" data-act="invite" data-pickup="${esc(p.id)}">+ Invite</button>` : '') +
            `<button class="pk-btn ghost" data-act="link" data-pickup="${esc(p.id)}">Copy link</button>` +
-           (p.status !== 'closed' ? `<button class="pk-btn danger" data-act="cancel" data-pickup="${esc(p.id)}">Cancel</button>` : '');
+           (p.status !== 'closed' ? confirmBtn('cancel', p.id, 'Cancel', 'danger', 'data-pickup') : '');
   } else if (myStatus === 'joined') {
     btns = `<button class="pk-btn ghost" data-act="leave" data-pickup="${esc(p.id)}">Leave</button>`;
   } else if (myStatus === 'invited') {
@@ -757,6 +761,11 @@ function wirePickupButtons(court) {
     btn.addEventListener('click', async (e) => {
       const act = e.currentTarget.dataset.act;
       const id = e.currentTarget.dataset.pickup;
+      // Cancel is two-tap armed, as in Mine: the first tap says "Sure?" and sends nothing; any other
+      // tap disarms. No native confirm dialog (project-conventions, v1.3.0).
+      const sure = !!e.currentTarget.dataset.sure;
+      state.confirm = null;
+      if (act === 'cancel' && !sure) { state.confirm = armKey('cancel', id); paintPickupRows(court); return; }
       try {
         if (act === 'link') {
           const mine = state.mine[id];
@@ -769,10 +778,7 @@ function wirePickupButtons(court) {
         await withProfile(async () => {
           if (act === 'join') { await BE.joinPickup(id); flash('pickup-feedback', 'You’re in. The organiser has been told.'); }
           if (act === 'leave') { await BE.leavePickup(id); flash('pickup-feedback', 'You left this pickup.'); }
-          if (act === 'cancel') {
-            if (!confirm('Cancel this pickup? Everyone on the roster will be told.')) return;
-            await BE.cancelPickup(id); flash('pickup-feedback', 'Pickup cancelled.');
-          }
+          if (act === 'cancel') { await BE.cancelPickup(id); flash('pickup-feedback', 'Pickup cancelled.'); }
           if (act === 'accept') { await BE.respondToInvitation(id, true); flash('pickup-feedback', 'Accepted. You’re in.'); }
           if (act === 'decline') { await BE.respondToInvitation(id, false); flash('pickup-feedback', 'Declined.'); }
         }, court);
@@ -811,8 +817,7 @@ function showProfileForm(court, onDone) {
         </select>
       </label>
       <div class="pickup-form-btns"><button type="submit" class="pk-btn">Save</button><button type="button" class="pk-btn ghost" data-close>Not now</button></div>
-      <div class="pickup-form-note">No password, no email needed. You can attach an email later to keep this identity across devices.
-        <button type="button" class="link-btn" data-signin>Played before? Sign in</button></div>
+      <div class="pickup-form-note">No password · no email <button type="button" class="link-btn" data-signin>Played before? Sign in</button></div>
     </form>`;
   const form = document.getElementById('profile-form');
   form.querySelector('[data-close]').addEventListener('click', () => { slot.innerHTML = ''; });
@@ -838,7 +843,6 @@ function showSignInForm(slot) {
       <div class="pickup-form-title">Sign in with the email you kept</div>
       <label>Email <input type="email" name="email" required placeholder="you@example.com" autocomplete="email"></label>
       <div class="pickup-form-btns"><button type="submit" class="pk-btn">Send link</button><button type="button" class="pk-btn ghost" data-close>Not now</button></div>
-      <div class="pickup-form-note">A sign-in link lands in that inbox · no password.</div>
     </form>`;
   const form = slot.querySelector('form');
   form.querySelector('[data-close]').addEventListener('click', () => { slot.innerHTML = ''; });
@@ -925,6 +929,8 @@ async function refreshInbox() {
     const count = document.getElementById('inbox-count');
     count.textContent = state.inbox.length;
     count.classList.toggle('hidden', state.inbox.length === 0);
+    // aria-label replaces the button's content in its accessible name, so the count rides it.
+    btn.setAttribute('aria-label', state.inbox.length ? `Notifications · ${state.inbox.length} unread` : 'Notifications');
     if (state.inboxOpen) renderInbox();
     if (!state.me) state.me = await BE.myProfile();
     refreshHeader();
@@ -956,6 +962,8 @@ function updateFriendBadge(n) {
   if (!el) return;
   el.textContent = n;
   el.classList.toggle('hidden', !n);
+  const btn = document.getElementById('friends-btn');
+  if (btn) btn.setAttribute('aria-label', n ? `Friends · ${n} request${n === 1 ? '' : 's'}` : 'Friends');
 }
 
 function renderInbox() {
@@ -992,7 +1000,11 @@ function renderInbox() {
       await refreshInbox();
       if (act !== 'show' && state.inboxOpen) renderInbox();
     } catch (err) {
-      alert(err.message || 'That did not work.');
+      // No native dialog: the error reads inside the dropdown, above the items.
+      const note = document.createElement('div');
+      note.className = 'inbox-empty error';
+      note.textContent = err.message || 'That did not work.';
+      box.prepend(note);
     }
   }));
 }
@@ -1108,7 +1120,9 @@ function mineAction(p) {
     if (p.my_status === 'owner' || p.my_status === 'joined') return `<button type="button" class="pk-btn" data-act="vote" data-pickup="${id}">Vote MVP</button>`;
     return '';
   }
-  if (organiser && (p.status === 'in_progress' || started)) return `<button type="button" class="pk-btn" data-act="result" data-pickup="${id}">Enter result</button>`;
+  // A started pickup that never happened is cancelled from here too (cancel_pickup allows open and in_progress).
+  if (organiser && (p.status === 'in_progress' || started)) return `<button type="button" class="pk-btn" data-act="result" data-pickup="${id}">Enter result</button>` +
+    confirmBtn('cancel', p.id, 'Cancel', 'ghost', 'data-pickup');
   if (p.my_status === 'invited') return `<button type="button" class="pk-btn" data-act="accept" data-pickup="${id}">Accept</button><button type="button" class="pk-btn ghost" data-act="decline" data-pickup="${id}">Decline</button>`;
   if (organiser) return `<button type="button" class="pk-btn ghost" data-act="invite" data-pickup="${id}">+ Invite</button>` +
     `<button type="button" class="pk-btn ghost" data-act="link" data-pickup="${id}" aria-label="Copy link" title="Copy link">🔗</button>` +
@@ -1217,6 +1231,7 @@ function actResult(act, ds, el, data) {
   captureResultForm(data);
   const n = Number(ds.team);
   if (data.teams[ds.player] === n) delete data.teams[ds.player]; else data.teams[ds.player] = n;
+  data.ackUnassigned = false;
   return renderResultPanel(data);
 }
 
@@ -1228,11 +1243,19 @@ async function submitResult(form, data) {
   if (!team1.length || !team2.length) return sheetFlash('Each team needs a player.', true);
   if (!sets) return sheetFlash('Sets read like 6-4 3-6 10-7.', true);
   if (!data.winner) return sheetFlash('Pick the winning team.', true);
+  // record_result accepts a roster player on neither team; player_standing then counts them a game they
+  // could not win (0003). Say so once; the next Save sends (actResult clears the acknowledgement).
+  const unassigned = data.roster.filter(r => !data.teams[r.player_id]).length;
+  if (unassigned && !data.ackUnassigned) {
+    data.ackUnassigned = true;
+    return sheetFlash(`${unassigned} player${unassigned === 1 ? '' : 's'} unassigned · they count as played · Save again to confirm`, true);
+  }
   const row = await BE.recordResult({ pickupId: data.pickupId, team1, team2, team1Scores: sets.t1, team2Scores: sets.t2, winningTeam: data.winner });
   const m = state.mine[data.pickupId];
   if (m) { m.status = (row && row.status) || 'closed'; m.winning_team_no = (row && row.winning_team_no) || data.winner; }
   state.mineFresh = false;
   popSheet();
+  if (!topSheet()) openSheet('mine');     // opened from the inbox: nothing beneath, so the flash needs a sheet
   sheetFlash(`Saved · closed · team ${data.winner} won`);
   refreshCourtPanel();
 }
@@ -1263,6 +1286,7 @@ async function actVote(act, ds, el, data) {
   state.myVotes[data.pickupId] = ds.player;
   state.mineFresh = false;
   popSheet();
+  if (!topSheet()) openSheet('mine');     // opened from the inbox: nothing beneath, so the flash needs a sheet
   sheetFlash(decided ? 'Voted ✓ · MVP decided' : 'Voted ✓');
 }
 
@@ -1697,7 +1721,7 @@ async function openSharedPickup() {
   if (!live()) { console.warn('Shared pickup link ignored: no backend configured.'); return; }
   try {
     const p = await BE.pickupByToken(m[1]);
-    if (!p) { flash('report-feedback', 'That pickup link is no longer valid.', true); return; }
+    if (!p) { authNotice('That pickup link is no longer valid.'); return; }   // the sidebar line: no panel is open on a cold load
     state.highlightPickup = p.id;
     state.highlightCourt = p.court_id;
     state.highlightShown = false;
@@ -1740,7 +1764,9 @@ function wireEvents() {
 
   const inboxBtn = document.getElementById('inbox-btn');
   if (inboxBtn) {
-    inboxBtn.addEventListener('click', () => { state.inboxOpen = !state.inboxOpen; renderInbox(); });
+    // One header layer at a time: the bell closes an open sheet (toggleSheet closes the inbox), so
+    // the dropdown is never painted under a sheet and Escape closes the layer the player sees.
+    inboxBtn.addEventListener('click', () => { if (topSheet()) closeSheet(); state.inboxOpen = !state.inboxOpen; renderInbox(); });
   }
 
   wireSheet();
