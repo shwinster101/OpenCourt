@@ -110,9 +110,9 @@ requirements/user stories and workflow as our fundamental requirements and agent
 - **Unchanged:** the court finder's code, data, deploy and the no-build-step rule; the SRS's
   Supabase choice (§7) stands as the plan of record (see the stack decision record in
   MIGRATION §1).
-- **Open, for the owner:** the visible wording of the rename on the page ("PickUp" · "PickUp ·
-  OpenCourt LA" · "PickUp LA"); the extension of the mission line; disabling the 2021 Google
-  service account.
+- **Open, for the owner:** ~~the visible wording of the rename on the page~~ (ruled 2026-10-18, v1.3.1:
+  the PickUp wordmark leads, "OpenCourt LA" is the sub-line); the extension of the mission line; disabling
+  the 2021 Google service account.
 
 ### Identity comes from the database, never from the client (review ruling 2026-10-17, v1.1.0)
 

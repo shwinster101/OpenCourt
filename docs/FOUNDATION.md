@@ -72,6 +72,9 @@ and tested.
 
 ## 3. Name, logo, repository (RULING)
 
+> **Landed 2026-10-18 (v1.3.1):** the page header now leads with the PickUp wordmark and keeps "OpenCourt LA"
+> as the sub-line; the page title reads "PickUp — OpenCourt LA". The owner took the recommended wording.
+
 | Item | Ruling | Where |
 |---|---|---|
 | Product name | **PickUp** | Everywhere a user reads it |

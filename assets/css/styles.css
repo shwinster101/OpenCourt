@@ -142,7 +142,11 @@ header {
   z-index: 1000;
 }
 
-.brand { display: flex; align-items: baseline; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* v1.3.1: the product is PickUp (owner ruling 2026-10-18); the 2021 wordmark leads, OpenCourt LA names the catalogue. */
+.brand-logo { height: 34px; width: auto; display: block; background: #fff; border-radius: 8px; padding: 3px 7px; flex: 0 0 auto; }
+.brand-sub { display: inline-flex; align-items: baseline; }
+.brand-sub .brand-mark { font-size: 15px; font-weight: 700; letter-spacing: 0; opacity: 0.92; }
 
 .brand-mark {
   font-family: 'Fraunces', serif;
@@ -935,6 +939,8 @@ header {
     width: auto; max-height: 80vh;
   }
   .brand-tag { display: none; }
+  .brand-logo { height: 28px; }
+  .brand-sub .brand-mark { font-size: 13px; }
 }
 
 /* ============================================================

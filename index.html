@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OpenCourt LA — Find an Open Court</title>
-  <meta name="description" content="Find open tennis and pickleball courts across Los Angeles County. Crowdsourced live availability + smart heuristics.">
+  <title>PickUp — OpenCourt LA · find an open court, find a game</title>
+  <meta name="description" content="PickUp: find open tennis and pickleball courts across Los Angeles County, see live reports from players on the ground, and find a game.">
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
 
   <!-- Open Graph / social -->
-  <meta property="og:title" content="OpenCourt LA">
+  <link rel="apple-touch-icon" href="assets/img/pickup-icon-1024.png">
+  <meta property="og:title" content="PickUp · OpenCourt LA">
   <meta property="og:description" content="Turning 'where can I play?' into 'I'm on my way.'">
   <meta property="og:type" content="website">
 
@@ -29,7 +30,8 @@
   <!-- HEADER -->
   <header>
     <div class="brand">
-      <span class="brand-mark">Open<span class="accent">Court</span> LA</span>
+      <img class="brand-logo" src="assets/img/pickup-logo.png" alt="PickUp" width="581" height="197" decoding="async">
+      <span class="brand-sub" aria-label="OpenCourt LA"><span class="brand-mark">Open<span class="accent">Court</span> LA</span></span>
       <span class="brand-tag">— turning "where can I play?" into "I'm on my way."</span>
     </div>
     <div class="header-right">
@@ -52,7 +54,7 @@
       <button class="inbox-btn hidden" id="inbox-btn" type="button" aria-label="Notifications">
         <span aria-hidden="true">🔔</span><span class="inbox-count hidden" id="inbox-count">0</span>
       </button>
-      <span class="version">v1.3.0</span>
+      <span class="version">v1.3.1</span>
     </div>
     <div class="inbox" id="inbox" aria-live="polite"></div>
   </header>
