@@ -5,7 +5,7 @@ Postgres/PostGIS, an Express/TypeScript server providing 19 Hasura actions, a Fi
 pytest flow tests, wired by `docker-compose.yml`. Written by Arian Rahbar, July–November 2021.
 
 **This repository is frozen.** PickUp continues in
-[shwinster101/OpenCourt](https://github.com/shwinster101/OpenCourt), which keeps the PickUp name and
+[shwinster101/PickUp](https://github.com/shwinster101/PickUp), which keeps the PickUp name and
 logo and rebuilds this flow on working APIs. Start with `CLAUDE.md` here, then OpenCourt's
 `docs/LEGACY_PICKUP_BACKEND.md` (what this code does) and `docs/MIGRATION.md` (how it moves).
 

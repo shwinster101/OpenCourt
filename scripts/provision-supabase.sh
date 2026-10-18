@@ -31,7 +31,7 @@ set -Eeuo pipefail
 umask 077
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-PAGES_URL='https://shwinster101.github.io/OpenCourt/'
+PAGES_URL='https://shwinster101.github.io/PickUp/'
 LOCAL_URL='http://localhost:8000'
 PG_CRON_DOC='https://supabase.com/docs/guides/cron/install'
 # Supabase's own instruction (PG_CRON_DOC, read 2026-10-17): "create extension pg_cron with schema

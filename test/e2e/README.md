@@ -230,7 +230,7 @@ Or, once `config.js` is filled on `main` and Pages has deployed, with no `OC_SUP
 page's own config is the thing under test):
 
 ```sh
-OC_PAGE_URL=https://shwinster101.github.io/OpenCourt/ node test/e2e/two-browsers.cjs
+OC_PAGE_URL=https://shwinster101.github.io/PickUp/ node test/e2e/two-browsers.cjs
 ```
 
 The anon key is a publishable client credential (`docs/MIGRATION.md` §3); it goes in the command's

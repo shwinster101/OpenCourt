@@ -2,7 +2,7 @@
 
 > **Read [`CLAUDE.md`](./CLAUDE.md) first.** It states the owner's 2026-10-17 ruling: this
 > repository is a read-only reference for the migration of PickUp into
-> [shwinster101/OpenCourt](https://github.com/shwinster101/OpenCourt). When this file and
+> [shwinster101/PickUp](https://github.com/shwinster101/PickUp). When this file and
 > CLAUDE.md disagree, CLAUDE.md wins.
 
 - **Do not build features here.** No dependency upgrades, no CI, no new screens. The 2021 backend

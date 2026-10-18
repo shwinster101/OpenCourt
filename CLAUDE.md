@@ -1,5 +1,15 @@
 # CLAUDE.md — OpenCourt (PickUp's successor)
 
+**v1.3.2 — THE REPOSITORY AND THE LINK ARE PICKUP TOO.** Owner (2026-10-18): "Can we change the repo and link
+to be PickUp?", then renamed the repository themselves: it is `shwinster101/PickUp` and the site is
+**https://shwinster101.github.io/PickUp/** (the old `/OpenCourt/` address answers 404; GitHub redirects the
+repository URL and git remotes, not the Pages site). This release repoints every reference in code and docs
+(the provisioner's `PAGES_URL`, its mock test, the e2e README, README, FOUNDATION, MIGRATION, the staged legacy
+pointers). **Owner's console, still:** add `https://shwinster101.github.io/PickUp/` (and `/**`) to Supabase →
+Authentication → URL Configuration so magic-link and keep-account redirects work (the Maps key needs nothing:
+its `https://shwinster101.github.io/*` referrer already covers the new path). "OpenCourt" remains the name of
+the codebase's structure and the LA catalogue inside the page; dated working notes keep the old URL as history.
+
 **v1.3.1 — THE NAME ON THE DOOR IS PICKUP.** Owner (2026-10-18), on the merged v1.3.0 and the question "Name
 still open court or shall we change to pickup": "yes after that do the pickup name change", taking the
 recommendation "PickUp as the wordmark, using the 2021 logo already in assets/img/, with OpenCourt LA kept as a
@@ -67,7 +77,7 @@ the same evening, "open the PR for the marker fix (let's go with the OverlayView
   Browser checks run on `http://localhost:8000`, the only local origin the Maps key's referrer list allows.
 - **The Maps key (owner's console, 2026-10-17 screenshots):** referrers and the API restriction are right.
   The live dialog persists, fires no auth failure, and appears on `localhost:8000` too, so the remaining cause
-  is billing on the Cloud project. **PR #1** (pins via OverlayView, no Map ID) is open from this branch.
+  is billing on the Cloud project. **PR #1** (pins via OverlayView, no Map ID) was merged 2026-10-18.
 - **Not done:** no Supabase project; realtime delivery and the email round trips are provable only on one;
   M4 part two; the visible rename; which of GitHub Pages and Cloudflare Pages (`opencourt.pages.dev`, which
   builds every branch) is production is the owner's call. Working note:
@@ -144,7 +154,7 @@ flow to the opencourt structure and working apis."
 - **The gate:** `scripts/check.sh` (JSON parses, JS parses, no secret-shaped strings). No test suite
   exists yet; the SRS §8 checklist is the manual acceptance until M1 adds tests.
 - **Found, not fixed (owner's call, first item of M0.5):** in headless Chromium the **live page**
-  (`shwinster101.github.io/OpenCourt`, v1.0.1) renders its map and list but **no court pins** —
+  (`shwinster101.github.io/PickUp`, v1.0.1) renders its map and list but **no court pins** —
   Advanced Markers are created on a map without a Map ID (20 console errors) — **and shows Google's
   "This page can't load Google Maps correctly" dialog** to every visitor: the committed key is
   referrer-restricted (an unlisted origin is refused), but its restriction, API scope or billing does

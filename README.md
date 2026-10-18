@@ -12,7 +12,7 @@ results, MVP, notifications — is being rebuilt here on working APIs. Start wit
 requirements), then [`docs/MIGRATION.md`](docs/MIGRATION.md) and
 [`docs/LEGACY_PICKUP_BACKEND.md`](docs/LEGACY_PICKUP_BACKEND.md). Agents read [`CLAUDE.md`](CLAUDE.md) first.
 
-**[Live site →](https://YOUR_USERNAME.github.io/opencourt-la/)** *(replace once Pages is enabled)*
+**[Live site →](https://shwinster101.github.io/PickUp/)** 
 
 ---
 
@@ -85,8 +85,8 @@ opencourt-la/
 
 ```bash
 # Clone
-git clone https://github.com/YOUR_USERNAME/opencourt-la.git
-cd opencourt-la
+git clone https://github.com/shwinster101/PickUp.git
+cd PickUp
 
 # Open index.html in a browser — but most browsers block fetch() on file:// URLs,
 # so run a local server instead:

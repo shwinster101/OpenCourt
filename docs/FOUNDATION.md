@@ -78,7 +78,7 @@ and tested.
 | Item | Ruling | Where |
 |---|---|---|
 | Product name | **PickUp** | Everywhere a user reads it |
-| Structure / codebase / repository name | **OpenCourt** (`shwinster101/OpenCourt`); "OpenCourt LA" remains the name of the LA court catalogue and may stay as a sub-brand or section title | This repository |
+| Structure / codebase / repository name | **OpenCourt** (`shwinster101/PickUp`); "OpenCourt LA" remains the name of the LA court catalogue and may stay as a sub-brand or section title | This repository |
 | Logo | The 2021 PickUp wordmark (581×197, six-colour letters with sports balls) and the "P" app icon, carried byte-identically | `assets/img/pickup-logo.png`, `assets/img/pickup-icon-1024.png` (sources: `PickUp/Assets.xcassets/logo.imageset/Logo.png`, `AppIcon.appiconset/Picture3-1024.png`) |
 | Legacy repositories | `PickUpBois/PickUp` and `PickUpBois/PickUpHasura` are frozen references; nothing new is built there | Their `CLAUDE.md` files say so |
 | Visible rename of the live page | **Open decision.** The header still reads "OpenCourt LA". Wording to rule on: "PickUp" alone · "PickUp · OpenCourt LA" · "PickUp LA" | `index.html` brand mark; first change of migration step M0 |
