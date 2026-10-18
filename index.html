@@ -41,13 +41,33 @@
         <span class="time-pulse"></span>
         <span id="current-time">—</span>
       </div>
+      <!-- M3: my name (profile sheet), Mine (my pickups), Friends. Shown only with a profile on the shared backend. -->
+      <button class="hdr-btn hidden" id="me-btn" type="button" aria-label="My profile" title="My profile"></button>
+      <button class="hdr-btn hidden" id="mine-btn" type="button" aria-label="My pickups" title="My pickups">
+        <span aria-hidden="true">🎾</span><span class="hdr-word">Mine</span>
+      </button>
+      <button class="hdr-btn hidden" id="friends-btn" type="button" aria-label="Friends" title="Friends">
+        <span aria-hidden="true">👥</span><span class="hdr-count hidden" id="friends-count">0</span>
+      </button>
       <button class="inbox-btn hidden" id="inbox-btn" type="button" aria-label="Notifications">
         <span aria-hidden="true">🔔</span><span class="inbox-count hidden" id="inbox-count">0</span>
       </button>
-      <span class="version">v1.2.0</span>
+      <span class="version">v1.3.0</span>
     </div>
     <div class="inbox" id="inbox" aria-live="polite"></div>
   </header>
+
+  <!-- M3 sheet: Mine · Friends · Invite · Result · Vote · Profile. One container, one panel at a time;
+       ✕ closes it, Escape closes the top layer, clicks are delegated on #sheet. -->
+  <div class="sheet hidden" id="sheet" role="dialog" aria-modal="false" aria-labelledby="sheet-title">
+    <div class="sheet-head">
+      <button class="sheet-back hidden" id="sheet-back" type="button" data-act="back" aria-label="Back">‹</button>
+      <div class="sheet-title" id="sheet-title">—</div>
+      <button class="sheet-close" type="button" data-act="close" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body" id="sheet-body"></div>
+    <div class="sheet-foot report-feedback" id="sheet-feedback" aria-live="polite"></div>
+  </div>
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -55,6 +75,8 @@
       <h1 class="sidebar-title">Find an <em>open court</em>.</h1>
       <p class="sidebar-subtitle">Tennis & pickleball across LA County. Availability scored from court count, time of day, and demand — sharpened by live reports from other players.</p>
       <div class="data-source" id="data-source" data-source="offline">Loading…</div>
+      <!-- M4: one line for a sign-in link that failed (an expired magic link lands here with #error=…) -->
+      <div class="auth-notice hidden" id="auth-notice" role="status"></div>
       <div class="season-hint">
         <strong id="hint-title">Season</strong>
         <span id="hint-body">—</span>

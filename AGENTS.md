@@ -25,15 +25,22 @@ pickups, invitations, scores, MVP, notifications) is being migrated from the 202
 ## Commands
 
 ```bash
-python3 -m http.server 8000      # serve the site locally (fetch() needs http://, not file://)
+python3 -m http.server 8000      # serve the site locally (fetch() needs http://, not file://); 8000 is the origin the Maps key allows
 sh scripts/check.sh              # the gate: data parses, JS parses, no secret-shaped strings, seed current
-sh scripts/check.sh --backend    # + the backend leg: migrations, RLS matrix and the ported 2021 flows
+sh scripts/check.sh --backend    # + the backend leg: migrations, RLS matrix, the ported 2021 flows, the realtime publication
                                  #   against a throwaway PostgreSQL (needs the server binaries; see test/backend/run.sh)
 node scripts/export-courts-seed.mjs > supabase/seed.sql   # after editing assets/data/courts.json
+PORT=8000 node test/browser/check-offline.cjs /tmp/o.png                                   # Playwright on NODE_PATH
+PORT=8000 node test/browser/check-backend.cjs test/browser/fake-supabase.js /tmp/b.png
+sh test/e2e/local-stack.sh start && sh test/e2e/smoke-local-backend.sh                     # the local stand-in for Supabase
+OC_SUPABASE_URL=http://127.0.0.1:54400 OC_SUPABASE_ANON_KEY=local-anon node test/e2e/two-browsers.cjs
+sh test/e2e/local-stack.sh stop
+bash test/provision/run.sh                                 # the provisioner against a mock of the Management API
+SUPABASE_ACCESS_TOKEN=… scripts/provision-supabase.sh      # the real thing (owner; token from the environment, never a file)
 ```
 
 There is no build step and no package manager for the site. The backend is SQL only
-(`supabase/`); provisioning steps are in `supabase/README.md`. Deploys happen on push to `main`
+(`supabase/`); provisioning is one command, with the manual steps as fallback, in `supabase/README.md`. Deploys happen on push to `main`
 through `.github/workflows/pages.yml`.
 
 ## Non-negotiables (details and rationale in CLAUDE.md)
@@ -45,7 +52,8 @@ through `.github/workflows/pages.yml`.
   2021 backend's one unforgivable design, and it is not ported.
 - **No build step until a build step is necessary.** Plain HTML/CSS/JS, deployable as-is.
 - **Forward-compatible schema.** Every record carries `metro`; migrations add, never rename.
-- **Secrets never enter this repository.** The only credential allowed in source is the
-  referrer-restricted Google Maps browser key; everything else is an environment variable.
+- **Secrets never enter this repository.** The only credentials allowed in source are the
+  referrer-restricted Google Maps browser key and the Supabase anon (publishable) key; everything else
+  is an environment variable. The gate refuses service-role keys.
 - **Findings live on the branch, in a dated `working/` note, not in chat.**
 - **The PickUp name and logo stay** (`assets/img/pickup-logo.png`, `pickup-icon-1024.png`).

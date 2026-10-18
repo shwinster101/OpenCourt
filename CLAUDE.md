@@ -1,5 +1,58 @@
 # CLAUDE.md — OpenCourt (PickUp's successor)
 
+**v1.3.0 — THE PEOPLE FLOW REACHES THE PAGE: FRIENDS, RESULTS, MVP AND STANDING; REALTIME ONLY WHERE IT IS
+HONEST; AN ACCOUNT YOU CAN KEEP; PROVISIONING AS ONE COMMAND; TWO BROWSERS, ONE PROOF, RUN HERE.** Owner
+(2026-10-17): "You do as much as you can look up instructions if needed. provision Supabase and fill config.js,
+then open two browsers and confirm a report on one appears on the other", with the long-term line "M3 screens
+plus M4 realtime and email upgrade, so friends, results and MVP reach the page and polling goes away"; and,
+the same evening, "open the PR for the marker fix (let's go with the OverlayView path so we don't need a Map ID)".
+- **M3 on the page:** three header buttons beside the inbox, shown only with a backend and a profile. **Mine**
+  lists my pickups with the one action each state allows (Enter result · Vote MVP · ⭐ name · + Invite / 🔗 /
+  Cancel · Leave · Accept/Decline). **Enter result** assigns the roster to two teams by tap, reads set scores
+  as "6-4 3-6 10-7", names the winner; the row reads closed. **Vote MVP** is one tap. **Friends** searches
+  players, sends/accepts/declines/cancels requests, removes, and invites a friend to my pickup from Mine or
+  the court panel. **You** shows name, username, skill and standing tiles (games · wins · ⭐ MVP · score;
+  the provisional formula behind ⓘ). Every destructive tap is two-tap armed ("Sure?"); no native dialogs.
+  No new SQL was needed: every screen reads the v1.2.0 views and functions.
+- **M4, part one.** `supabase/migrations/0005_realtime.sql` adds `pickups`, `pickup_attendees` and
+  `notifications` to the `supabase_realtime` publication where it exists; `court_reports` stays on the
+  5-minute poll (its RLS is author-only, so nobody else would receive an event). The page opens one channel;
+  "· live" appears on the data-source line only while it is SUBSCRIBED, and any other status falls back to the
+  v1.2.0 polling without a word. **The account:** an anonymous player can *Keep this account* (email
+  confirmation keeps the same id, so reports and games follow), a returning player signs in by magic link
+  (no new accounts are minted by a typo), Sign out is hidden for anonymous sessions because it would lose
+  the profile; `onAuthStateChange` reloads profile, inbox, Mine, the open court and the channel, and the hash
+  router ignores the auth hashes supabase-js consumes. Not built yet: push, share cards, "I'm here, need a 4th".
+- **Provisioning is one command.** `scripts/provision-supabase.sh` drives the Supabase Management API from
+  its OpenAPI document: organisation → create-or-reuse the project → wait healthy → anonymous sign-ins and
+  redirect URLs → `pg_cron` → the migrations and seed, each recorded in the project's migration history →
+  the anon key only → verify `courts_live` from outside → write `config.js`, preserving `GOOGLE_MAP_ID` and
+  `METRO`. The token never reaches argv, disk or output; the database password is printed once. `--dry-run`
+  and `--check` exist. Proven against a mock of the API (`test/provision/run.sh`, 40 assertions); **never run
+  for real from here, because this environment holds no token** (the owner stores `SUPABASE_ACCESS_TOKEN` as
+  an environment secret, or runs it locally).
+- **The owner's acceptance test, run here before a project exists.** `test/e2e/local-backend.py` is a
+  stand-in for Supabase: a mini PostgREST + GoTrue over the real migrations on a throwaway PostgreSQL, every
+  request under the real role with `auth.uid()` and RLS (psql per request; HS256 test tokens). `local-stack.sh`
+  starts it with the page; `smoke-local-backend.sh` runs 44 curl checks; **`two-browsers.cjs`** (Playwright,
+  the real pinned supabase-js) opens two fresh browsers: A reports Open and B sees it live; A starts a pickup,
+  B joins it, A's inbox names B; Mine; the share link. 8 of 8 steps, three runs in a row. The same command
+  runs against the real project the minute `config.js` is filled.
+- **Fixed on the way:** the share-link highlight was applied once and lost to the next re-render (now
+  re-applied on every render of that court, dropped when another court opens; the proof's step 8 went from
+  intermittent to 3/3); the v1.2.0 working note's own prose tripped the secret scan at `daa9ea0` (reworded);
+  the realtime migration was numbered 0006 with no 0005 (renumbered; the provisioner test derives its
+  expected list from the folder).
+- **Gate:** `sh scripts/check.sh --backend` → GATE PASSED, **182 assertions** (t_040 realtime adds 15).
+  Browser checks run on `http://localhost:8000`, the only local origin the Maps key's referrer list allows.
+- **The Maps key (owner's console, 2026-10-17 screenshots):** referrers and the API restriction are right.
+  The live dialog persists, fires no auth failure, and appears on `localhost:8000` too, so the remaining cause
+  is billing on the Cloud project. **PR #1** (pins via OverlayView, no Map ID) is open from this branch.
+- **Not done:** no Supabase project; realtime delivery and the email round trips are provable only on one;
+  M4 part two; the visible rename; which of GitHub Pages and Cloudflare Pages (`opencourt.pages.dev`, which
+  builds every branch) is production is the owner's call. Working note:
+  `working/2026-10-17-m3-m4-and-provisioning.md`.
+
 **v1.2.0 — THE SHARED BACKEND, BUILT AND PROVEN BEFORE IT HAS A HOME: COURTS AND REPORTS, IDENTITY AND
 PICKUPS, FRIENDS, RESULTS AND MVP, AS SQL UNDER ROW-LEVEL SECURITY; THE PAGE WIRES TO IT AND STAYS HONEST
 WITHOUT IT.** Owner (2026-10-17): "Run the long term solution build. I'll work on the cloud console key."
@@ -97,15 +150,18 @@ localStorage reports, seasonal Grand Slam theming, consolidated SRS. See `docs/R
 ## Current brief
 
 PickUp, rebuilt on the OpenCourt structure: a **no-build-step HTML/CSS/JS** web app deployed to
-GitHub Pages on push to `main` (`.github/workflows/pages.yml`). It is a court finder for
-recreational tennis and pickleball in Los Angeles County (`index.html`, `assets/js/app.js`,
-`assets/js/backend.js`, `assets/js/config.js`, `assets/css/styles.css`, seed data in
-`assets/data/courts.json` and `grand-slams.json`) with the PickUp people flow — profiles, pickups on
-courts, invitations, the inbox, and in SQL also friends, results and MVP — on a **Supabase Postgres
-backend defined entirely by `supabase/migrations/`** (PostgREST + RPC + RLS; no server code). The
-page runs with or without the backend and says which. There is no package manager and no framework;
-the only runtime dependency is the pinned `supabase-js` UMD script. The version is the headline of
-this file; `index.html`'s badge and `docs/REQUIREMENTS.md` carry the same number.
+GitHub Pages on push to `main` (`.github/workflows/pages.yml`; a Cloudflare Pages project also builds
+the repository). It is a court finder for recreational tennis and pickleball in Los Angeles County
+(`index.html`, `assets/js/app.js`, `assets/js/backend.js`, `assets/js/config.js`,
+`assets/css/styles.css`, seed data in `assets/data/courts.json` and `grand-slams.json`) with the PickUp
+people flow on the page — profiles, pickups on courts, invitations, the inbox, friends, results, MVP,
+standing, an account you can keep — on a **Supabase Postgres backend defined entirely by
+`supabase/migrations/`** (PostgREST + RPC + RLS + one realtime publication; no server code). The page
+runs with or without the backend and says which. `scripts/provision-supabase.sh` creates the project;
+`test/e2e/` proves the shared flow in two browsers, against a local stand-in today and the real project
+tomorrow. There is no package manager and no framework; the only runtime dependency is the pinned
+`supabase-js` UMD script. The version is the headline of this file; `index.html`'s badge and
+`docs/REQUIREMENTS.md` carry the same number.
 
 ## Required reading
 
@@ -152,14 +208,22 @@ solution.
 
 ```bash
 sh scripts/check.sh              # the gate: data parses, scripts parse, no secret-shaped strings, seed current
-sh scripts/check.sh --backend    # + migrations, RLS matrix and the ported 2021 flows on a throwaway PostgreSQL
-python3 -m http.server 8000      # then walk docs/REQUIREMENTS.md §8 by hand at http://localhost:8000
+sh scripts/check.sh --backend    # + migrations, RLS matrix, the ported 2021 flows and the realtime publication
+                                 #   on a throwaway PostgreSQL (182 assertions)
+python3 -m http.server 8000      # the only local origin the Maps key allows; then, with Playwright on NODE_PATH:
+PORT=8000 node test/browser/check-offline.cjs /tmp/offline.png                               # 20 pins, no errors
+PORT=8000 node test/browser/check-backend.cjs test/browser/fake-supabase.js /tmp/backend.png  # every screen, errors []
+sh test/e2e/local-stack.sh start && sh test/e2e/smoke-local-backend.sh                        # the stand-in, 44 checks
+OC_SUPABASE_URL=http://127.0.0.1:54400 OC_SUPABASE_ANON_KEY=local-anon node test/e2e/two-browsers.cjs  # 8 steps
+sh test/e2e/local-stack.sh stop
+bash test/provision/run.sh       # the provisioner against a mock of the Management API (40 assertions)
 ```
 
-The backend leg needs the PostgreSQL server binaries (it skips with a message otherwise; set
-`REQUIRE_BACKEND=1` to fail instead). Pushes to `main` deploy Pages automatically. No production
-activation is implied by preparing a branch; the live backend exists only once the owner provisions
-the Supabase project (`supabase/README.md`) and fills `assets/js/config.js`.
+The backend leg and the stand-in need the PostgreSQL server binaries (the leg skips with a message
+otherwise; set `REQUIRE_BACKEND=1` to fail instead). Pushes to `main` deploy Pages automatically. No
+production activation is implied by preparing a branch; the live backend exists only once the owner
+provisions the Supabase project (`supabase/README.md`, one command) and `assets/js/config.js` holds its
+URL and anon key.
 
 ## Legacy repositories (frozen, read-only)
 

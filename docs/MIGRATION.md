@@ -237,21 +237,24 @@ the plan got wrong, the commit SHAs), per `CLAUDE.md`.
 
 ---
 
-## 7b. Build status (v1.2.0, 2026-10-17)
+## 7b. Build status (v1.3.0, 2026-10-18; first written at v1.2.0)
 
 | Step | Status | Evidence |
 |---|---|---|
-| M0.5 | 🔶 pins restored (OverlayView path; `GOOGLE_MAP_ID` opt-in for Advanced Markers); honesty wording fixed; `esc()` added; **not done:** the Maps key/console check (owner), README/SETUP placeholder URLs, the Pages `_site/` artifact | `assets/js/app.js`, headless-browser run in the working note |
-| M1 | ✅ built and tested; ⬜ provisioned | `supabase/migrations/0001`, `test/backend/t_010` (25 assertions); `supabase/README.md` |
-| M2 | ✅ built and tested; page wired (pickups on the court panel, name prompt, share link, inbox); ⬜ provisioned | `0002`, `t_020` (71), `assets/js/backend.js`, fake-backend browser run |
-| M3 | ✅ SQL built and tested; ⬜ screens | `0003`, `t_030` (71) |
-| M4 | ⬜ (`linkEmail` exists in the client, no UI; no realtime, no push) | — |
+| M0.5 | 🔶 pins restored (OverlayView; `GOOGLE_MAP_ID` opt-in) and on PR #1; honesty wording; `esc()`; the share-link highlight now survives re-renders. **Still owner's:** billing on the Maps project (referrers and API restriction verified right on 2026-10-17); README/SETUP placeholder URLs; a Pages `_site/` artifact | `assets/js/app.js`, headless runs in the working notes |
+| M1 | ✅ built and tested; ⬜ provisioned | `supabase/migrations/0001`, `test/backend/t_010` (25); `scripts/provision-supabase.sh` ready |
+| M2 | ✅ built, tested, on the page (pickups, invitations, inbox, share link); ⬜ provisioned | `0002`, `t_020` (71), `assets/js/backend.js`, `test/browser/check-backend.cjs`, `test/e2e/two-browsers.cjs` 8/8 on the stand-in |
+| M3 | ✅ SQL built and tested; ✅ screens (Mine, Enter result, Vote MVP, Friends, Invite, You/standing); ⬜ provisioned | `0003`, `t_030` (71); `check-backend.cjs` M3 steps |
+| M4 | 🔶 realtime publication (`0005`, `t_040` 15) and channel with honest fallback; Keep this account · magic-link sign-in · Sign out. ⬜ push, share cards, "I'm here, need a 4th". Delivery and the email round trips are provable only on a real project | `0005_realtime.sql`, `backend.js subscribe()`, `check-backend.cjs` (SUBSCRIBED and CHANNEL_ERROR contexts) |
 | M5 | ⬜ | — |
+| Provisioning | ✅ scripted and tested against a mock (40 assertions); ⬜ run for real (no token in the build environment) | `scripts/provision-supabase.sh`, `test/provision/` |
+| The proof | ✅ two browsers share a report, a pickup, a join, an inbox line and a share link on the local stand-in (3 runs, 8/8); ⬜ on the real project | `test/e2e/local-backend.py`, `local-stack.sh`, `smoke-local-backend.sh` (44), `two-browsers.cjs` |
 
 Deviations from the plan above, each recorded as a ruling in `docs/project-conventions.md`: a
 profile on an anonymous session is enough to play; notifications are written inside the RPC
 transaction (not by table triggers; same guarantee, no second request); M3 landed as SQL before M2
-had its screens finished because the tests made it cheap.
+had its screens finished because the tests made it cheap; at v1.3.0 realtime carries three tables and
+not reports (author-only RLS), and the acceptance test and the provisioning are scripts.
 
 ## 8. Risks and open decisions
 

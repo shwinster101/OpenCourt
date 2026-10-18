@@ -24,6 +24,39 @@ and the working rhythm. Read before changes.
 
 ## Locked decisions
 
+### The people flow on the page; realtime only where honest; provisioning and the proof as scripts (build rulings 2026-10-17/18, v1.3.0)
+
+**Owner (2026-10-17):** "provision Supabase and fill config.js, then open two browsers and confirm a report
+on one appears on the other" · "M3 screens plus M4 realtime and email upgrade, so friends, results and MVP
+reach the page and polling goes away" · "open the PR for the marker fix (let's go with the OverlayView path
+so we don't need a Map ID)".
+
+- **Pins draw through OverlayView.** `GOOGLE_MAP_ID` stays empty; Advanced Markers are an opt-in the
+  owner may never take. PR #1 carries this to `main`.
+- **Realtime carries only what every subscriber may read:** `pickups`, `pickup_attendees` and
+  `notifications` (own rows). `court_reports` stays polled every 5 minutes because its RLS is author-only.
+  "· live" shows only while the channel is SUBSCRIBED; any other status is the v1.2.0 polling, silently.
+- **The account ladder:** anonymous first (unchanged); *Keep this account* adds an email to the same id;
+  *Played before? Sign in* is a magic link that never creates an account; Sign out is hidden for anonymous
+  sessions because it would lose the profile.
+- **Destructive taps are two-tap armed** (Cancel, Leave, Remove, Sign out): the first tap says "Sure?" and
+  sends nothing. No native confirm dialogs.
+- **Standing is readable by any signed-in player** (`player_standing` is granted to `authenticated` with no
+  row filter), which a leaderboard will want; the owner may tighten it in one grant.
+- **Provisioning is a script, not a checklist:** `scripts/provision-supabase.sh`, written from the
+  Management API's OpenAPI document. The token is an environment secret (`SUPABASE_ACCESS_TOKEN`), never a
+  file or a chat message; the database password is printed once and stored by the owner. The manual steps
+  stay in `supabase/README.md` as the fallback.
+- **The acceptance test is a script:** `test/e2e/two-browsers.cjs`. Until a project exists it runs against
+  the local stand-in (`test/e2e/local-backend.py`), which is a test tool only: any divergence from Supabase
+  is a bug in the stand-in, never a feature of the page.
+- **Browser checks run on `localhost:8000`**, the one local origin the Maps key allows; a check on another
+  port reports zero pins for that reason alone.
+- **Migrations stay contiguous** (`0001`–`0005`); the provisioner test derives its expectations from the
+  folder, so a new file never needs a hand edit there.
+- **Unchanged:** every v1.2.0 ruling below; the no-build rule; the seed from `courts.json`; the SRS's
+  Supabase choice; the Maps key and billing are the owner's console work.
+
 ### The backend is SQL under row-level security; a profile is enough to play (build rulings 2026-10-17, v1.2.0)
 
 **Owner:** "Run the long term solution build. I'll work on the cloud console key."

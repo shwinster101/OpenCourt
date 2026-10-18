@@ -1,6 +1,6 @@
 # OpenCourt LA — Software Requirements Specification (SRS)
 
-**Version:** 1.2.0 · **Date:** 2026-10-17 · **Status:** Phase 1 shipped, Phase 2 built (awaiting a Supabase project), PickUp foundation adopted
+**Version:** 1.3.0 · **Date:** 2026-10-18 · **Status:** Phase 1 shipped; Phase 2 and the Phase 3 people flow built and proven against a local stand-in (awaiting a Supabase project, one command); PickUp foundation adopted
 
 This document consolidates every requirement stated across the CourtFinder project threads into one north star. Each requirement has an ID, a priority, a phase, and a status against the current build.
 

@@ -42,3 +42,6 @@ temp/
 # Local backups
 *.bak
 *.backup
+
+# Local Supabase stand-in (test/e2e/local-stack.sh): pids, logs and cluster location
+test/e2e/.stack/

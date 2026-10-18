@@ -30,7 +30,7 @@ The long-term vision is a multi-city platform. **OpenCourt LA** is v1.
 - **Google Maps with auto-fit bounds** — the first frame shows the full LA footprint, including the northernmost Antelope Valley site
 - **Three-tier access model:** Free / Low-cost public (< $20/hr) / Private-members
 - **Heuristic availability scoring** — 🟢 Likely Open / 🟡 Toss-Up / 🔴 Likely Full, computed from court count, demand tier, time of day, day of week
-- **Crowdsourced live reports** — three-button interface (Open / Mixed / Full), persisted to `localStorage` in v1 (Phase 2 will move to Supabase)
+- **Crowdsourced live reports** — three-button interface (Open / Mixed / Full); shared through Supabase when configured, on the device otherwise, and the page says which
 - **Seasonal Grand Slam theming** — palette automatically retunes for the next major (Roland-Garros clay, Wimbledon purple, US Open blue, Australian Open teal)
 - **Filters** — sport, access tier, likely status
 - **No build step** — plain HTML/CSS/JS deployable to GitHub Pages
@@ -44,24 +44,29 @@ opencourt-la/
 ├── index.html                   # Entry point
 ├── assets/
 │   ├── css/styles.css           # All styles + seasonal theme variables
-│   ├── js/app.js                # Application logic
-│   ├── js/backend.js            # Supabase client wrapper (views + RPC); Backend.enabled gates the people features
+│   ├── js/app.js                # Application logic: court finder + the PickUp people flow
+│   ├── js/backend.js            # Supabase client wrapper (views, RPC, one realtime channel); Backend.enabled gates the people features
 │   ├── js/config.js             # Public runtime config: Supabase URL + anon key, optional Map ID
 │   ├── data/
-│   │   ├── courts.json          # Court database (Phase 2 will move to Supabase)
+│   │   ├── courts.json          # Court seed (the source of supabase/seed.sql)
 │   │   └── grand-slams.json     # Grand Slam calendar driving the theme engine
-│   └── img/favicon.svg          # Favicon
+│   └── img/                     # favicon, the PickUp wordmark and icon
 ├── CLAUDE.md                    # Agent brief: rulings, release record, invariants, the gate
 ├── AGENTS.md                    # Thin pointer to CLAUDE.md
-├── supabase/                    # The backend: migrations/0001–0004 (SQL), seed.sql, README (provisioning)
-├── test/backend/                # run.sh + shim.sql + t_*.sql: the backend test leg on a throwaway PostgreSQL
+├── supabase/                    # The backend: migrations/0001–0005 (SQL), seed.sql, README (provisioning)
 ├── scripts/check.sh             # The gate: data parses, scripts parse, no secret-shaped strings, seed current (--backend adds the SQL leg)
+├── scripts/provision-supabase.sh   # One command: project → auth → pg_cron → migrations + seed → anon key → config.js
 ├── scripts/export-courts-seed.mjs  # courts.json → supabase/seed.sql
+├── test/backend/                # run.sh + shim.sql + t_*.sql: the SQL leg on a throwaway PostgreSQL (182 assertions)
+├── test/browser/                # Playwright checks of the page, offline and against a fake supabase-js
+├── test/e2e/                    # A local stand-in for Supabase (mini PostgREST + GoTrue) and the two-browser proof
+├── test/provision/              # A mock of the Supabase Management API and the provisioner's tests
 ├── working/                     # Dated findings notes (the record of each pass)
 ├── docs/
 │   ├── FOUNDATION.md            # PickUp: issue, goal, vision, mission, user stories, workflow, requirements
-│   ├── MIGRATION.md             # The 2021 backend flow → OpenCourt structure and working APIs
+│   ├── MIGRATION.md             # The 2021 backend flow → OpenCourt structure and working APIs (status in §7b)
 │   ├── LEGACY_PICKUP_BACKEND.md # What the 2021 backend actually did (source of truth for the port)
+│   ├── project-conventions.md   # Locked decisions and the working rhythm
 │   ├── REQUIREMENTS.md          # Consolidated SRS — the court-finder spec
 │   ├── PROJECT_BRIEF.md         # Vision and phases
 │   ├── SETUP.md                 # Local dev + deploy steps
@@ -107,20 +112,34 @@ You'll see a yellow banner prompting you to add your Google Maps API key. See `d
 
 ## The shared backend
 
-`supabase/` holds four SQL migrations and a seed: courts and crowd reports (M1), profiles, pickups,
-invitations and the inbox (M2), friends, results and MVP (M3), and the `pg_cron` schedules. Every
-rule lives in SQL under `auth.uid()`; clients never write a table directly. `test/backend/run.sh`
-proves it on a throwaway PostgreSQL (the ported 2021 flows plus a cross-user refusal matrix).
-Provisioning steps: [`supabase/README.md`](supabase/README.md). Then put the project URL and anon
-key into `assets/js/config.js`.
+`supabase/` holds five SQL migrations and a seed: courts and crowd reports (M1), profiles, pickups,
+invitations and the inbox (M2), friends, results and MVP (M3), the `pg_cron` schedules, and the realtime
+publication (M4). Every rule lives in SQL under `auth.uid()`; clients never write a table directly.
+`test/backend/run.sh` proves it on a throwaway PostgreSQL (the ported 2021 flows plus a cross-user
+refusal matrix, 182 assertions).
+
+**Provision it in one command** (`supabase/README.md`): with a Supabase access token in the environment,
+`scripts/provision-supabase.sh` creates the project, enables anonymous sign-ins and `pg_cron`, applies the
+migrations and seed, and writes the project URL and anon key into `assets/js/config.js`. The manual
+checklist is kept as the fallback.
+
+**Prove it in two browsers:** `test/e2e/two-browsers.cjs` opens two fresh browsers, reports a court in
+one and reads it in the other, starts a pickup in one and joins from the other. Before a project
+exists it runs against `test/e2e/local-backend.py`, a local stand-in for Supabase over the real
+migrations; afterwards, against the project itself.
+
+**With the backend configured the page gains:** shared reports, pickups on each public court with
+invitations and a share link, an inbox (live while the realtime channel is up, polled otherwise), Mine
+(results, MVP votes), Friends, and a You sheet with standing and an account you can keep by email.
+Without it the page says "Offline data · reports stay on this device" and shows none of those controls.
 
 ---
 
 ## Roadmap
 
 - **Phase 1 (current):** Personal MVP with curated data and heuristic scoring
-- **Phase 2:** Migrate `courts.json` to Supabase, persist crowdsourced reports backend-side, expand to ~50 courts
-- **Phase 3:** Pickup-game matchmaking, shareable via group chat or public board
+- **Phase 2:** `courts.json` on Supabase with shared reports — built; waits on the project (`scripts/provision-supabase.sh`); expand to ~50 courts
+- **Phase 3:** the PickUp people flow — pickups on courts, invitations, friends, results, MVP, standing — built; push and "I'm here" to follow
 
 See `docs/ROADMAP.md` for the full plan.
 

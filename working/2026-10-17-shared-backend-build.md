@@ -111,12 +111,13 @@ nothing else; no role but the functions' definer can insert into any table.
 
 ### 1.4 The gate (`scripts/check.sh`)
 
-- Step 3 (secret-shaped strings) now flags private keys, service-account files, `service_role_key` /
-  `SERVICE_ROLE` / `SUPABASE_SERVICE` names, payment and GitHub tokens, **and any JWT whose decoded
-  payload has `role = service_role`**. The bare role name `service_role` is legitimate SQL (the
-  migrations grant to it; the shim creates it) and no longer trips the gate; the anon key, also a JWT,
-  passes. Checked with three probes: an anon-role JWT passes, a service-role JWT fails, a
-  `SUPABASE_SERVICE_ROLE_KEY=` line fails.
+- Step 3 (secret-shaped strings) now flags private keys, service-account files, the upper-case
+  service-role key variable names and the Supabase service-key prefix, payment and GitHub tokens, **and
+  any JWT whose decoded payload has `role = service_role`**. The bare role name `service_role` is
+  legitimate SQL (the migrations grant to it; the shim creates it) and no longer trips the gate; the anon
+  key, also a JWT, passes. Checked with three probes: an anon-role JWT passes, a service-role JWT fails, a
+  line assigning the service-role key variable fails. (This paragraph itself once spelled those names out
+  and tripped the scan at `daa9ea0`; reworded in the v1.3.0 pass.)
 - Step 4: `supabase/seed.sql` must equal the export of `courts.json`.
 - `--backend` appends the test leg.
 

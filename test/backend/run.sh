@@ -54,6 +54,16 @@ if ! diff -q "$WORK/seed.sql" "$ROOT/supabase/seed.sql" >/dev/null 2>&1; then
 fi
 "${PSQL[@]}" -d opencourt_test -f "$ROOT/supabase/seed.sql"
 
+# KEEP=1 (used by test/e2e/local-stack.sh): stop here and leave the seeded cluster running as the
+# database of the local Supabase stand-in. No test file runs, nothing is torn down, and one line
+# says where the cluster is; the caller stops it (pg_ctl stop) and removes WORK. Without KEEP the
+# script behaves exactly as before.
+if [ -n "${KEEP:-}" ]; then
+  trap - EXIT
+  echo "KEEP PGHOST=$WORK/s PGPORT=$PORT PGDATA=$WORK/data PGBIN=$PGBIN WORK=$WORK PGDATABASE=opencourt_test PGUSER=postgres"
+  exit 0
+fi
+
 status=0
 passed=0
 for t in "$ROOT"/test/backend/t_*.sql; do

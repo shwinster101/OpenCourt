@@ -10,6 +10,11 @@
    - Crowd reports: shared through the backend, or kept on this device
    - Pickups on a court: list, start, join, leave, cancel, share (backend only)
    - The inbox (backend only)
+   - The M3 sheet: Mine (my pickups: result, MVP vote, invite), Friends,
+     Invite, Result, Vote, Profile with standing (backend only)
+   - M4: one realtime channel while it is honest ("· live" only while
+     SUBSCRIBED), polling otherwise; the account rows (keep this account ·
+     sign in on another device · sign out) and the auth-event refresh
    - Applying the seasonal Grand Slam theme
 
    Honesty rule: the page always says where its data comes from
@@ -37,8 +42,21 @@ const state = {
   mine: {},                   // pickupId -> my_pickups row
   me: null,                   // my profile (backend only)
   highlightPickup: null,      // pickup id opened from a share link
+  highlightCourt: null,       // the court that pickup sits on (the highlight survives re-renders there)
+  highlightShown: false,      // scrolled to it once
   inbox: [],
-  inboxOpen: false
+  inboxOpen: false,
+  // M3 sheet
+  sheets: [],                 // stack of { kind, data }; the top one is rendered
+  confirm: null,              // 'act:id' of a two-tap button that is armed
+  minePickups: [],            // my_pickups rows, newest first
+  mineFresh: false,           // false → the Mine panel re-reads before it renders
+  myVotes: {},                // pickupId -> votee id (my own mvp_votes)
+  names: {},                  // profile id -> display name (MVPs, friends)
+  friends: { fresh: false, edges: [], incoming: [], list: [], query: '', results: [] },
+  // M4 realtime: status is the channel's last word (SUBSCRIBED | CHANNEL_ERROR | TIMED_OUT | CLOSED | null);
+  // uid is the session the channel was opened for; seq retires a channel's callbacks when a newer one opens.
+  rt: { status: null, uid: null, seq: 0, unsub: null, pollInbox: null, pollCourts: null, inboxEvery: 0, kicks: {} }
 };
 
 const live = () => !!BE && state.dataSource === 'live';
@@ -122,8 +140,15 @@ function renderDataSource() {
     'offline': 'Offline data · reports stay on this device',
     'offline-fallback': 'Backend unreachable · bundled data · reports stay on this device'
   }[state.dataSource];
-  el.textContent = text;
+  // "· live" only while the realtime channel reports SUBSCRIBED; otherwise the page polls and claims nothing more.
+  const liveNow = rtLive();
+  el.textContent = liveNow ? `${text} · live` : text;
   el.dataset.source = state.dataSource;
+  el.dataset.live = liveNow ? '1' : '0';
+  el.dataset.poll = live() && state.rt.inboxEvery ? String(state.rt.inboxEvery / 1000) : '';
+  // One tap deep: what "live" covers. Reports are not in the publication (0005), so they stay on the 5-minute read.
+  el.title = liveNow ? 'Pickups and your inbox arrive as they happen · reports refresh every 5 min'
+    : live() ? `Checks for updates every ${state.rt.inboxEvery >= 300000 ? '5 min' : 'minute'}` : '';
 }
 
 /* ============================================================
@@ -527,6 +552,9 @@ function statusBlock(court) {
 
 function selectCourt(id, opts = {}) {
   state.selectedId = id;
+  if (state.highlightPickup && state.highlightCourt !== id) {
+    state.highlightPickup = null; state.highlightCourt = null; state.highlightShown = false;
+  }
   const court = COURTS.find(c => c.id === id);
   if (!court) return;
 
@@ -672,13 +700,21 @@ async function renderPickups(court) {
     } else {
       list.innerHTML = rows.map(p => pickupRow(p)).join('');
     }
-    actions.innerHTML = `<button class="pickup-new-btn" id="pickup-new">+ Start a pickup here</button><div id="pickup-form-slot"></div>`;
+    // A realtime event or an auth refresh re-renders this block while the visitor may be filling
+    // in a form (name, new pickup, sign-in): the old slot element is re-attached, listeners intact.
+    const prevSlot = document.getElementById('pickup-form-slot');
+    actions.innerHTML = `<button class="pickup-new-btn" id="pickup-new">+ Start a pickup here</button>`;
+    actions.appendChild(prevSlot && prevSlot.childElementCount ? prevSlot : Object.assign(document.createElement('div'), { id: 'pickup-form-slot' }));
     document.getElementById('pickup-new').addEventListener('click', () => showPickupForm(court));
     wirePickupButtons(court);
+    // The share-link highlight is re-applied on every render of this court (a realtime event or an
+    // auth refresh rebuilds the rows); it is dropped only when another court is opened. Scroll once.
     if (state.highlightPickup) {
       const el = list.querySelector(`[data-pickup="${state.highlightPickup}"]`);
-      if (el) { el.classList.add('highlight'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-      state.highlightPickup = null;
+      if (el) {
+        el.classList.add('highlight');
+        if (!state.highlightShown) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); state.highlightShown = true; }
+      }
     }
   } catch (err) {
     list.innerHTML = `<div class="pickups-empty error">${esc(err.message || 'Could not load pickups.')}</div>`;
@@ -693,7 +729,8 @@ function pickupRow(p) {
   const open = p.status === 'open';
   let btns = '';
   if (myStatus === 'owner') {
-    btns = `<button class="pk-btn ghost" data-act="link" data-pickup="${esc(p.id)}">Copy link</button>` +
+    btns = (open ? `<button class="pk-btn ghost" data-act="invite" data-pickup="${esc(p.id)}">+ Invite</button>` : '') +
+           `<button class="pk-btn ghost" data-act="link" data-pickup="${esc(p.id)}">Copy link</button>` +
            (p.status !== 'closed' ? `<button class="pk-btn danger" data-act="cancel" data-pickup="${esc(p.id)}">Cancel</button>` : '');
   } else if (myStatus === 'joined') {
     btns = `<button class="pk-btn ghost" data-act="leave" data-pickup="${esc(p.id)}">Leave</button>`;
@@ -728,6 +765,7 @@ function wirePickupButtons(court) {
           flash('pickup-feedback', 'Link copied. Anyone with it can open this pickup and join.');
           return;
         }
+        if (act === 'invite') { openSheet('invite', { pickupId: id }); return; }
         await withProfile(async () => {
           if (act === 'join') { await BE.joinPickup(id); flash('pickup-feedback', 'You’re in. The organiser has been told.'); }
           if (act === 'leave') { await BE.leavePickup(id); flash('pickup-feedback', 'You left this pickup.'); }
@@ -773,10 +811,12 @@ function showProfileForm(court, onDone) {
         </select>
       </label>
       <div class="pickup-form-btns"><button type="submit" class="pk-btn">Save</button><button type="button" class="pk-btn ghost" data-close>Not now</button></div>
-      <div class="pickup-form-note">No password, no email needed. You can attach an email later to keep this identity across devices.</div>
+      <div class="pickup-form-note">No password, no email needed. You can attach an email later to keep this identity across devices.
+        <button type="button" class="link-btn" data-signin>Played before? Sign in</button></div>
     </form>`;
   const form = document.getElementById('profile-form');
   form.querySelector('[data-close]').addEventListener('click', () => { slot.innerHTML = ''; });
+  form.querySelector('[data-signin]').addEventListener('click', () => showSignInForm(slot));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
@@ -789,6 +829,30 @@ function showProfileForm(court, onDone) {
       flash('pickup-feedback', err.message || 'Could not save your name.', true);
     }
   });
+}
+
+// A returning player on a new device, before they have a profile here: a magic link to the email they kept.
+function showSignInForm(slot) {
+  slot.innerHTML = `
+    <form class="pickup-form" id="signin-form-court">
+      <div class="pickup-form-title">Sign in with the email you kept</div>
+      <label>Email <input type="email" name="email" required placeholder="you@example.com" autocomplete="email"></label>
+      <div class="pickup-form-btns"><button type="submit" class="pk-btn">Send link</button><button type="button" class="pk-btn ghost" data-close>Not now</button></div>
+      <div class="pickup-form-note">A sign-in link lands in that inbox · no password.</div>
+    </form>`;
+  const form = slot.querySelector('form');
+  form.querySelector('[data-close]').addEventListener('click', () => { slot.innerHTML = ''; });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try { flash('pickup-feedback', await sendSignInLink(new FormData(form).get('email'))); slot.innerHTML = ''; }
+    catch (err) { flash('pickup-feedback', err.message || 'Could not send the link.', true); }
+  });
+}
+
+async function sendSignInLink(email) {
+  const addr = String(email || '').trim();
+  await BE.signInWithEmail(addr);
+  return `Check ${addr} for a sign-in link.`;
 }
 
 function showPickupForm(court) {
@@ -855,16 +919,43 @@ async function refreshInbox() {
   if (!btn || !live()) return;
   try {
     const session = await BE.getSession();
-    if (!session) { btn.classList.add('hidden'); return; }
+    if (!session) { btn.classList.add('hidden'); refreshHeader(); return; }
     state.inbox = await BE.notifications(20);
     btn.classList.remove('hidden');
     const count = document.getElementById('inbox-count');
     count.textContent = state.inbox.length;
     count.classList.toggle('hidden', state.inbox.length === 0);
     if (state.inboxOpen) renderInbox();
+    if (!state.me) state.me = await BE.myProfile();
+    refreshHeader();
+    refreshFriendBadge();
   } catch (e) {
     console.warn('Inbox unavailable', e);
   }
+}
+
+// The M3 header buttons (my name, Mine, Friends) show only with a profile on the shared backend.
+function refreshHeader() {
+  const has = !!(live() && state.me);
+  ['me-btn', 'mine-btn', 'friends-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !has);
+  });
+  const meBtn = document.getElementById('me-btn');
+  if (meBtn && has) meBtn.textContent = state.me.display_name;
+}
+
+async function refreshFriendBadge() {
+  if (!live() || !state.me) return;
+  try { updateFriendBadge((await BE.incomingFriendRequests()).length); }
+  catch (e) { console.warn('Friend requests unavailable', e); }
+}
+
+function updateFriendBadge(n) {
+  const el = document.getElementById('friends-count');
+  if (!el) return;
+  el.textContent = n;
+  el.classList.toggle('hidden', !n);
 }
 
 function renderInbox() {
@@ -881,6 +972,9 @@ function renderInbox() {
       <div class="inbox-text">${esc(notificationText(n))}</div>
       <div class="inbox-actions">
         ${n.kind === 'invitation' && n.pickup_id ? `<button class="pk-btn" data-act="accept" data-pickup="${esc(n.pickup_id)}" data-nid="${esc(n.id)}">Accept</button><button class="pk-btn ghost" data-act="decline" data-pickup="${esc(n.pickup_id)}" data-nid="${esc(n.id)}">Decline</button>` : ''}
+        ${n.kind === 'enter_result' && n.pickup_id ? `<button class="pk-btn" data-act="result" data-pickup="${esc(n.pickup_id)}" data-nid="${esc(n.id)}">Enter result</button>` : ''}
+        ${n.kind === 'vote_mvp' && n.pickup_id ? `<button class="pk-btn" data-act="vote" data-pickup="${esc(n.pickup_id)}" data-nid="${esc(n.id)}">Vote MVP</button>` : ''}
+        ${n.kind === 'friend_request' ? `<button class="pk-btn" data-act="friends" data-nid="${esc(n.id)}">Open</button>` : ''}
         ${n.court_id ? `<button class="pk-btn ghost" data-act="show" data-court="${esc(n.court_id)}" data-nid="${esc(n.id)}">Show</button>` : ''}
         <button class="pk-btn ghost" data-act="read" data-nid="${esc(n.id)}">Dismiss</button>
       </div>
@@ -891,10 +985,12 @@ function renderInbox() {
       if (act === 'accept') await BE.respondToInvitation(pickup, true);
       if (act === 'decline') await BE.respondToInvitation(pickup, false);
       if (act === 'show') { state.inboxOpen = false; renderInbox(); selectCourt(court, { fly: true }); }
+      if (act === 'result' || act === 'vote') { state.inboxOpen = false; renderInbox(); state.sheets = []; openSheet(act, { pickupId: pickup }); }
+      if (act === 'friends') { state.inboxOpen = false; renderInbox(); state.sheets = []; state.friends.fresh = false; openSheet('friends'); }
       if (act === 'read-all') await BE.markRead(state.inbox.map(n => n.id));
       else if (nid) await BE.markRead([Number(nid)]);
       await refreshInbox();
-      if (act !== 'show') renderInbox();
+      if (act !== 'show' && state.inboxOpen) renderInbox();
     } catch (err) {
       alert(err.message || 'That did not work.');
     }
@@ -902,9 +998,700 @@ function renderInbox() {
 }
 
 /* ============================================================
+   M3 SHEET — Mine · Friends · Invite · Result · Vote · Profile (backend only)
+   One container (#sheet) and a stack of panels; the top one renders.
+   ✕ closes the sheet, ‹ and Escape close the top layer only.
+   Clicks, input and submit are delegated on #sheet: a re-render replaces
+   innerHTML and adds no listeners. One rendering function per panel.
+   Every player field reaches innerHTML through esc().
+   ============================================================ */
+const myId = () => (state.me && state.me.id) || (BE && BE.userId()) || null;
+const LOADING = `<div class="pickups-empty">Loading…</div>`;
+
+const PANELS = {
+  mine:    { title: () => 'My pickups',   render: renderMinePanel,    act: actMine },
+  friends: { title: () => 'Friends',      render: renderFriendsPanel, act: actFriends },
+  invite:  { title: () => 'Invite',       render: renderInvitePanel,  act: actInvite },
+  result:  { title: () => 'Enter result', render: renderResultPanel,  act: actResult, submit: submitResult },
+  vote:    { title: () => 'Vote MVP',     render: renderVotePanel,    act: actVote },
+  profile: { title: () => 'You',          render: renderProfilePanel, act: actProfile, submit: submitProfile }
+};
+
+const topSheet = () => state.sheets[state.sheets.length - 1] || null;
+function openSheet(kind, data) { state.sheets.push({ kind, data: data || {} }); renderSheet(); }
+function popSheet() { state.sheets.pop(); renderSheet(); }
+function closeSheet() { state.sheets = []; renderSheet(); }
+
+// Header buttons: a second tap on the same panel closes it; a different one replaces the stack.
+function toggleSheet(kind) {
+  const top = topSheet();
+  if (top && top.kind === kind && state.sheets.length === 1) return closeSheet();
+  state.sheets = [];
+  if (kind === 'mine') state.mineFresh = false;
+  if (kind === 'friends') state.friends.fresh = false;
+  if (state.inboxOpen) { state.inboxOpen = false; renderInbox(); }
+  openSheet(kind);
+}
+
+function renderSheet() {
+  const box = document.getElementById('sheet');
+  if (!box) return;
+  const top = topSheet();
+  state.confirm = null;
+  box.classList.toggle('hidden', !top);
+  const back = document.getElementById('sheet-back');
+  if (back) back.classList.toggle('hidden', state.sheets.length < 2);
+  const fb = document.getElementById('sheet-feedback');
+  if (fb) { fb.textContent = ''; fb.classList.remove('shown', 'error'); }
+  if (!top) { box.removeAttribute('data-kind'); return; }
+  const panel = PANELS[top.kind];
+  document.getElementById('sheet-title').textContent = panel.title(top.data);
+  box.dataset.kind = top.kind;
+  Promise.resolve(panel.render(top.data)).catch(err => sheetFlash(err.message || 'Could not load.', true));
+}
+
+// Writes the body only while `entry` is still the top panel (a slow load never paints over a newer one).
+function setBody(entry, html) {
+  if (topSheet() !== entry) return;
+  const b = document.getElementById('sheet-body');
+  if (b) b.innerHTML = html;
+}
+const sheetFlash = (text, isError) => flash('sheet-feedback', text, isError);
+
+// Two-tap buttons (Cancel, Leave, Remove): the first tap arms, the second acts. No native dialog.
+function armKey(act, id) { return `${act}:${id}`; }
+function confirmBtn(act, id, label, cls, attr) {
+  const armed = state.confirm === armKey(act, id);
+  return `<button type="button" class="pk-btn ${armed ? 'danger' : cls}" data-act="${act}" ${attr}="${esc(id)}"${armed ? ' data-sure="1"' : ''}>${armed ? 'Sure?' : label}</button>`;
+}
+
+function refreshCourtPanel() {
+  const court = COURTS.find(c => c.id === state.selectedId);
+  if (court && document.getElementById('pickups-list')) renderPickups(court);
+  renderList(); renderMarkers();
+}
+
+async function copyShareLink(p) {
+  const url = `${location.origin}${location.pathname}#pickup=${p && p.share_token ? p.share_token : ''}`;
+  try { await navigator.clipboard.writeText(url); sheetFlash('Link copied.'); }
+  catch (e) { sheetFlash(`Copy this link: ${url}`); }
+}
+
+/* ---- Mine --------------------------------------------------------------------------------- */
+async function loadMine() {
+  const [rows, votes] = await Promise.all([BE.myPickups(), BE.myVotes().catch(() => [])]);
+  rows.sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at));
+  state.minePickups = rows;
+  state.mine = {};
+  rows.forEach(m => { state.mine[m.id] = m; });
+  state.myVotes = {};
+  votes.forEach(v => { state.myVotes[v.pickup_id] = v.votee_id; });
+  const need = rows.map(r => r.mvp_id).filter(id => id && !state.names[id]);
+  if (need.length) (await BE.profilesByIds(need)).forEach(p => { state.names[p.id] = p.display_name; });
+  state.mineFresh = true;
+  return rows;
+}
+
+const STATUS_WORD = { open: 'open', in_progress: 'in progress', closed: 'closed', cancelled: 'cancelled' };
+
+// The one action a row's state allows (and the glyphs that ride beside it).
+function mineAction(p) {
+  const uid = myId();
+  const organiser = p.my_status === 'owner' || p.organiser_id === uid;
+  const started = new Date(p.starts_at) <= new Date();
+  const id = esc(p.id);
+  if (p.status === 'cancelled') return '';
+  if (p.status === 'closed') {
+    if (p.winning_team_no == null) return `<span class="pk-state">no result</span>`;
+    if (p.mvp_id) return `<span class="mvp-chip" title="MVP">⭐ ${esc(p.mvp_id === uid ? 'you' : (state.names[p.mvp_id] || 'MVP'))}</span>`;
+    if (state.myVotes[p.id]) return `<span class="pk-state">voted ✓</span>`;
+    if (p.my_status === 'owner' || p.my_status === 'joined') return `<button type="button" class="pk-btn" data-act="vote" data-pickup="${id}">Vote MVP</button>`;
+    return '';
+  }
+  if (organiser && (p.status === 'in_progress' || started)) return `<button type="button" class="pk-btn" data-act="result" data-pickup="${id}">Enter result</button>`;
+  if (p.my_status === 'invited') return `<button type="button" class="pk-btn" data-act="accept" data-pickup="${id}">Accept</button><button type="button" class="pk-btn ghost" data-act="decline" data-pickup="${id}">Decline</button>`;
+  if (organiser) return `<button type="button" class="pk-btn ghost" data-act="invite" data-pickup="${id}">+ Invite</button>` +
+    `<button type="button" class="pk-btn ghost" data-act="link" data-pickup="${id}" aria-label="Copy link" title="Copy link">🔗</button>` +
+    confirmBtn('cancel', p.id, 'Cancel', 'danger', 'data-pickup');
+  if (p.my_status === 'joined') return (p.status === 'open' ? `<button type="button" class="pk-btn ghost" data-act="link" data-pickup="${id}" aria-label="Copy link" title="Copy link">🔗</button>` : '') +
+    confirmBtn('leave', p.id, 'Leave', 'ghost', 'data-pickup');
+  return '';
+}
+
+function mineRow(p) {
+  const you = p.my_status === 'owner' ? 'yours' : p.my_status === 'invited' ? 'invited' : '';
+  return `
+    <div class="mine-row ${esc(p.status)}" data-pickup="${esc(p.id)}">
+      <div class="mine-main">
+        <div class="mine-top"><span class="st-chip ${esc(p.status)}">${STATUS_WORD[p.status] || esc(p.status)}</span><span class="mine-court">${sportEmoji(p.sport)} ${esc(p.court_name)}</span></div>
+        <div class="pickup-meta">${esc(fmtWhen(p.starts_at))} · ${esc(p.joined_count)}/${esc(p.capacity)}${you ? ` · ${you}` : ''}</div>
+      </div>
+      <div class="pickup-btns">${mineAction(p)}</div>
+    </div>`;
+}
+
+async function renderMinePanel() {
+  const entry = topSheet();
+  if (!state.mineFresh) { setBody(entry, LOADING); await loadMine(); }
+  const rows = state.minePickups;
+  setBody(entry, rows.length
+    ? `<div class="mine-list">${rows.map(mineRow).join('')}</div>`
+    : `<div class="pickups-empty">No pickups yet · start one from a court</div>`);
+}
+
+async function actMine(act, ds) {
+  const id = ds.pickup;
+  if (act === 'result') return openSheet('result', { pickupId: id });
+  if (act === 'vote') return openSheet('vote', { pickupId: id });
+  if (act === 'invite') return openSheet('invite', { pickupId: id });
+  if (act === 'link') return copyShareLink(state.mine[id]);
+  if ((act === 'cancel' || act === 'leave') && !ds.sure) { state.confirm = armKey(act, id); return renderMinePanel(); }
+  if (act === 'cancel') { await BE.cancelPickup(id); sheetFlash('Cancelled.'); }
+  else if (act === 'leave') { await BE.leavePickup(id); sheetFlash('You left.'); }
+  else if (act === 'accept') { await BE.respondToInvitation(id, true); sheetFlash('You’re in.'); }
+  else if (act === 'decline') { await BE.respondToInvitation(id, false); sheetFlash('Declined.'); }
+  else return;
+  state.mineFresh = false;
+  await renderMinePanel();
+  refreshCourtPanel();
+}
+
+/* ---- Result ------------------------------------------------------------------------------- */
+const playing = (r) => r.status === 'owner' || r.status === 'joined';
+const pickupLine = (p) => p ? `${sportEmoji(p.sport)} ${esc(p.court_name)} · ${esc(fmtWhen(p.starts_at))}` : '';
+
+// "6-4 3-6 10-7" → { t1: [6,3,10], t2: [4,6,7] }; null when a token is not two numbers.
+function parseSets(text) {
+  const toks = String(text || '').trim().split(/[\s,;]+/).filter(Boolean);
+  if (!toks.length) return null;
+  const t1 = [], t2 = [];
+  for (const t of toks) {
+    const m = t.match(/^(\d{1,2})[-–:](\d{1,2})$/);
+    if (!m) return null;
+    t1.push(Number(m[1])); t2.push(Number(m[2]));
+  }
+  return { t1, t2 };
+}
+
+async function renderResultPanel(data) {
+  const entry = topSheet();
+  if (!data.roster) {
+    setBody(entry, LOADING);
+    if (!state.mine[data.pickupId]) await loadMine();
+    data.roster = (await BE.roster(data.pickupId)).filter(playing);
+    data.teams = {}; data.sets = ''; data.winner = null;
+  }
+  const uid = myId();
+  const seg = (r, n) => `<button type="button" class="seg${data.teams[r.player_id] === n ? ' on' : ''}" data-act="team" data-player="${esc(r.player_id)}" data-team="${n}" aria-pressed="${data.teams[r.player_id] === n}" aria-label="${esc(r.display_name)} team ${n}">${n}</button>`;
+  setBody(entry, `
+    <div class="sheet-sub">${pickupLine(state.mine[data.pickupId])}</div>
+    <form id="result-form" class="result-form" autocomplete="off">
+      <div class="result-grid">
+        <div class="result-head"><span>Player</span><span>T1</span><span>T2</span></div>
+        ${data.roster.map(r => `
+          <div class="result-player" data-player="${esc(r.player_id)}">
+            <span class="result-name">${esc(r.display_name)}${r.player_id === uid ? ' <span class="you">you</span>' : ''}</span>
+            ${seg(r, 1)}${seg(r, 2)}
+          </div>`).join('')}
+      </div>
+      <label class="result-sets"><span>Sets · T1-T2</span><input id="result-sets" name="sets" value="${esc(data.sets)}" placeholder="6-4 3-6 10-7" inputmode="numeric"></label>
+      <div class="result-winner" role="radiogroup" aria-label="Winner">
+        <span class="result-label">Winner</span>
+        <label class="radio"><input type="radio" name="winner" value="1"${data.winner === 1 ? ' checked' : ''}> Team 1</label>
+        <label class="radio"><input type="radio" name="winner" value="2"${data.winner === 2 ? ' checked' : ''}> Team 2</label>
+      </div>
+      <div class="pickup-form-btns"><button type="submit" class="pk-btn">Save result</button></div>
+    </form>`);
+}
+
+function captureResultForm(data) {
+  const form = document.getElementById('result-form');
+  if (!form) return;
+  const fd = new FormData(form);
+  data.sets = String(fd.get('sets') || '');
+  data.winner = Number(fd.get('winner')) || null;
+}
+
+function actResult(act, ds, el, data) {
+  if (act !== 'team') return;
+  captureResultForm(data);
+  const n = Number(ds.team);
+  if (data.teams[ds.player] === n) delete data.teams[ds.player]; else data.teams[ds.player] = n;
+  return renderResultPanel(data);
+}
+
+async function submitResult(form, data) {
+  captureResultForm(data);
+  const team1 = Object.keys(data.teams).filter(k => data.teams[k] === 1);
+  const team2 = Object.keys(data.teams).filter(k => data.teams[k] === 2);
+  const sets = parseSets(data.sets);
+  if (!team1.length || !team2.length) return sheetFlash('Each team needs a player.', true);
+  if (!sets) return sheetFlash('Sets read like 6-4 3-6 10-7.', true);
+  if (!data.winner) return sheetFlash('Pick the winning team.', true);
+  const row = await BE.recordResult({ pickupId: data.pickupId, team1, team2, team1Scores: sets.t1, team2Scores: sets.t2, winningTeam: data.winner });
+  const m = state.mine[data.pickupId];
+  if (m) { m.status = (row && row.status) || 'closed'; m.winning_team_no = (row && row.winning_team_no) || data.winner; }
+  state.mineFresh = false;
+  popSheet();
+  sheetFlash(`Saved · closed · team ${data.winner} won`);
+  refreshCourtPanel();
+}
+
+/* ---- Vote --------------------------------------------------------------------------------- */
+async function renderVotePanel(data) {
+  const entry = topSheet();
+  if (!data.roster) {
+    setBody(entry, LOADING);
+    if (!state.mine[data.pickupId]) await loadMine();
+    const uid = myId();
+    data.roster = (await BE.roster(data.pickupId)).filter(r => playing(r) && r.player_id !== uid);
+  }
+  setBody(entry, `
+    <div class="sheet-sub">${pickupLine(state.mine[data.pickupId])}</div>
+    <div class="vote-list">${data.roster.length ? data.roster.map(r => `
+      <button type="button" class="vote-row" data-act="votefor" data-player="${esc(r.player_id)}">
+        <span class="friend-name">${esc(r.display_name)}</span>
+        ${r.team_no ? `<span class="pk-state">T${esc(r.team_no)}</span>` : ''}
+        <span class="vote-star" aria-hidden="true">⭐</span>
+      </button>`).join('') : `<div class="pickups-empty">Nobody else to vote for</div>`}
+    </div>`);
+}
+
+async function actVote(act, ds, el, data) {
+  if (act !== 'votefor') return;
+  const decided = await BE.voteMvp(data.pickupId, ds.player);
+  state.myVotes[data.pickupId] = ds.player;
+  state.mineFresh = false;
+  popSheet();
+  sheetFlash(decided ? 'Voted ✓ · MVP decided' : 'Voted ✓');
+}
+
+/* ---- Friends ------------------------------------------------------------------------------ */
+async function loadFriends() {
+  const f = state.friends;
+  const [edges, incoming, list] = await Promise.all([BE.myFriendEdges(), BE.incomingFriendRequests(), BE.myFriends()]);
+  f.edges = edges; f.incoming = incoming; f.list = list; f.fresh = true;
+  incoming.concat(list).forEach(p => { state.names[p.id] = p.display_name; });
+  updateFriendBadge(incoming.length);
+}
+
+// friend_status derived from my own edges: both = friends, mine only = pending_out, theirs only = pending_in.
+function friendStatusOf(id) {
+  const uid = myId();
+  let out = false, inn = false;
+  state.friends.edges.forEach(e => {
+    if (e.requester_id === uid && e.addressee_id === id) out = true;
+    if (e.requester_id === id && e.addressee_id === uid) inn = true;
+  });
+  return out && inn ? 'friends' : out ? 'pending_out' : inn ? 'pending_in' : 'none';
+}
+
+function friendBtns(p) {
+  if (p.id === myId()) return `<span class="pk-state">you</span>`;
+  const id = esc(p.id);
+  const st = friendStatusOf(p.id);
+  if (st === 'none') return `<button type="button" class="pk-btn" data-act="friend-add" data-player="${id}">+ Add</button>`;
+  if (st === 'pending_out') return `<button type="button" class="pk-btn ghost" data-act="friend-cancel" data-player="${id}" title="Tap to cancel">Requested ✓</button>`;
+  if (st === 'pending_in') return `<button type="button" class="pk-btn" data-act="friend-accept" data-player="${id}">Accept</button><button type="button" class="pk-btn ghost" data-act="friend-decline" data-player="${id}">Decline</button>`;
+  return state.confirm === armKey('remove', p.id)
+    ? `<button type="button" class="pk-btn danger" data-act="friend-remove" data-player="${id}" data-sure="1">Remove</button>`
+    : `<button type="button" class="pk-btn ghost" data-act="friend-remove" data-player="${id}" title="Tap for Remove">Friends ✓</button>`;
+}
+
+function playerRow(p, btns) {
+  return `
+    <div class="friend-row" data-player="${esc(p.id)}">
+      <div class="friend-main">
+        <span class="friend-name">${esc(p.display_name)}</span>
+        <span class="friend-user">@${esc(p.username)}</span>${p.skill ? `<span class="skill-chip" title="skill ${esc(p.skill)} of 5">S${esc(p.skill)}</span>` : ''}
+      </div>
+      <div class="pickup-btns">${btns}</div>
+    </div>`;
+}
+
+function friendResultsHtml() {
+  const f = state.friends;
+  if (f.query.trim().length < 2) return '';
+  if (!f.results.length) return `<div class="pickups-empty">No player matches</div>`;
+  return f.results.map(p => playerRow(p, friendBtns(p))).join('');
+}
+
+let friendQueryTimer = null;
+function onFriendQuery(value) {
+  const f = state.friends;
+  f.query = value;
+  clearTimeout(friendQueryTimer);
+  const q = value.trim();
+  const paint = () => { const el = document.getElementById('friend-results'); if (el) el.innerHTML = friendResultsHtml(); };
+  if (q.length < 2) { f.results = []; paint(); return; }
+  friendQueryTimer = setTimeout(async () => {
+    try {
+      const rows = await BE.searchPlayers(q);
+      if (f.query.trim() !== q) return; // a newer query is in flight
+      f.results = rows || [];
+      rows.forEach(p => { state.names[p.id] = p.display_name; });
+      paint();
+    } catch (err) { sheetFlash(err.message || 'Search failed.', true); }
+  }, 300);
+}
+
+async function renderFriendsPanel() {
+  const entry = topSheet();
+  if (!state.friends.fresh) { setBody(entry, LOADING); await loadFriends(); }
+  const f = state.friends;
+  setBody(entry, `
+    <input id="friend-q" class="sheet-search" type="search" value="${esc(f.query)}" placeholder="Find a player · 2+ letters" aria-label="Find a player" autocomplete="off">
+    <div id="friend-results" class="friend-list">${friendResultsHtml()}</div>
+    ${f.incoming.length ? `<div class="sheet-h">Requests <span class="count-pill">${f.incoming.length}</span></div>
+    <div class="friend-list" id="friend-incoming">${f.incoming.map(p => playerRow(p, friendBtns(p))).join('')}</div>` : ''}
+    <div class="sheet-h">Friends <span class="count-pill">${f.list.length}</span></div>
+    <div class="friend-list" id="friend-list">${f.list.length ? f.list.map(p => playerRow(p, friendBtns(p))).join('') : `<div class="pickups-empty">No friends yet · search above</div>`}</div>`);
+}
+
+async function actFriends(act, ds) {
+  const id = ds.player;
+  if (act === 'friend-add') { const r = await BE.sendFriendRequest(id); sheetFlash(r === 'friends' ? 'Friends ✓' : 'Requested ✓'); }
+  else if (act === 'friend-cancel') { await BE.cancelFriendRequest(id); sheetFlash('Request withdrawn.'); }
+  else if (act === 'friend-accept') { await BE.acceptFriendRequest(id); sheetFlash('Friends ✓'); }
+  else if (act === 'friend-decline') { await BE.rejectFriendRequest(id); sheetFlash('Declined.'); }
+  else if (act === 'friend-remove') {
+    if (!ds.sure) { state.confirm = armKey('remove', id); return renderFriendsPanel(); }
+    await BE.removeFriend(id); sheetFlash('Removed.');
+  }
+  else return;
+  state.friends.fresh = false;
+  await renderFriendsPanel();
+}
+
+/* ---- Invite (from a pickup I organise) ---------------------------------------------------- */
+async function renderInvitePanel(data) {
+  const entry = topSheet();
+  setBody(entry, LOADING);
+  if (!state.mine[data.pickupId]) await loadMine().catch(() => {});
+  const p = state.mine[data.pickupId];
+  const [roster, friends] = await Promise.all([BE.roster(data.pickupId), BE.myFriends()]);
+  const on = new Set(roster.map(r => r.player_id));
+  const cands = friends.filter(f => !on.has(f.id));
+  const rosterChip = (r) => r.status === 'invited'
+    ? `<span class="st-chip invited">invited</span><button type="button" class="pk-btn ghost" data-act="invite-cancel" data-player="${esc(r.player_id)}" aria-label="Cancel invitation" title="Cancel invitation">✕</button>`
+    : `<span class="st-chip ${esc(r.status)}">${r.status === 'owner' ? 'organiser' : 'joined ✓'}</span>`;
+  setBody(entry, `
+    <div class="sheet-sub">${pickupLine(p)}${p ? ` · ${esc(p.joined_count)}/${esc(p.capacity)}` : ''}</div>
+    <div class="sheet-h">Friends to invite</div>
+    <div class="friend-list" id="invite-list">${cands.length
+      ? cands.map(f => playerRow(f, `<button type="button" class="pk-btn" data-act="invite-send" data-player="${esc(f.id)}">+ Invite</button>`)).join('')
+      : `<div class="pickups-empty">${friends.length ? 'Every friend is on the roster' : 'No friends yet · add some under 👥'}</div>`}</div>
+    <div class="sheet-h">Roster <span class="count-pill">${roster.length}</span></div>
+    <div class="friend-list" id="invite-roster">${roster.map(r => `
+      <div class="friend-row" data-player="${esc(r.player_id)}">
+        <div class="friend-main"><span class="friend-name">${esc(r.display_name)}</span><span class="friend-user">@${esc(r.username)}</span></div>
+        <div class="pickup-btns">${rosterChip(r)}</div>
+      </div>`).join('')}</div>`);
+}
+
+async function actInvite(act, ds, el, data) {
+  if (act === 'invite-send') { await BE.inviteToPickup(data.pickupId, ds.player); sheetFlash('Invited ✓'); }
+  else if (act === 'invite-cancel') { await BE.cancelInvitation(data.pickupId, ds.player); sheetFlash('Invitation cancelled.'); }
+  else return;
+  state.mineFresh = false;
+  await renderInvitePanel(data);
+}
+
+/* ---- Profile and standing ----------------------------------------------------------------- */
+const skillPips = (n) => '●'.repeat(Number(n) || 0) + '○'.repeat(5 - (Number(n) || 0));
+
+async function renderProfilePanel() {
+  const entry = topSheet();
+  setBody(entry, LOADING);
+  const [row, st] = await Promise.all([BE.myProfile(true).catch(() => null), BE.myStanding().catch(() => null)]);
+  if (row) state.me = row;
+  const m = state.me || {};
+  const s = st || {};
+  const tile = (n, label) => `<div class="stand-tile"><div class="stand-num">${st ? esc(n) : '—'}</div><div class="stand-label">${label}</div></div>`;
+  setBody(entry, `
+    <div class="prof-head">
+      <div class="prof-name">${esc(m.display_name || '—')}</div>
+      <div class="prof-user">@${esc(m.username || '')}${m.skill ? ` · <span class="pips" title="skill ${esc(m.skill)} of 5">${skillPips(m.skill)}</span>` : ''}</div>
+    </div>
+    <div class="stand-grid" id="standing">
+      ${tile(s.games, 'games')}${tile(s.wins, 'wins')}${tile(s.mvps, '⭐ MVP')}
+      <div class="stand-tile accent"><div class="stand-num">${st ? esc(s.goat_score) : '—'}</div><div class="stand-label">score <button type="button" class="info-btn" data-act="formula" aria-label="How the score is computed" aria-expanded="false">ⓘ</button></div></div>
+    </div>
+    <div class="stand-formula hidden" id="stand-formula">provisional formula: 2 per win, 3 per MVP</div>
+    ${st ? '' : `<div class="pickup-form-note">Standing unavailable right now.</div>`}
+    <div id="acct" class="acct">${accountHtml()}</div>`);
+}
+
+// The account rows (M4, FR-61). Anonymous session: "Keep this account" (link an email; the uid and
+// everything on it stay) and "Played before? Sign in" (a magic link switches this device to the
+// account it names). Sign out is hidden for an anonymous session because it would lose the profile.
+// Permanent account: the email and a two-tap Sign out.
+function accountHtml() {
+  const pending = BE.pendingEmail();
+  if (!BE.isAnonymous()) {
+    const email = BE.userEmail();
+    return `
+      <div class="sheet-h">Account</div>
+      <div class="acct-row"><span class="acct-email" title="${esc(email || '')}">✉ ${esc(email || '—')}</span>${confirmBtn('signout', 'me', 'Sign out', 'ghost', 'data-id')}</div>
+      ${pending ? `<div class="pickup-form-note">New email ${esc(pending)} · confirm it from that inbox.</div>` : ''}`;
+  }
+  return `
+    <div class="sheet-h">Keep this account</div>
+    <form id="keep-form" class="acct-form">
+      <input type="email" name="email" required placeholder="you@example.com" aria-label="Email" autocomplete="email">
+      <button type="submit" class="pk-btn">Keep</button>
+    </form>
+    <div class="pickup-form-note">${pending ? `Sent to ${esc(pending)} · confirm it from that inbox. ` : ''}An email keeps this profile across devices · no password. Signing out of an anonymous profile loses it.</div>
+    <div class="sheet-h">Played before? Sign in</div>
+    <form id="signin-form" class="acct-form">
+      <input type="email" name="email" required placeholder="the email you kept" aria-label="Email" autocomplete="email">
+      <button type="submit" class="pk-btn ghost">Send link</button>
+    </form>
+    <div class="pickup-form-note">A sign-in link lands in that inbox and switches this device to that account.</div>`;
+}
+
+function repaintAccount() {
+  const el = document.getElementById('acct');
+  if (el && topSheet() && topSheet().kind === 'profile') el.innerHTML = accountHtml();
+}
+
+async function actProfile(act, ds, el) {
+  if (act === 'formula') {
+    const f = document.getElementById('stand-formula');
+    if (!f) return;
+    f.classList.toggle('hidden');
+    el.setAttribute('aria-expanded', String(!f.classList.contains('hidden')));
+    return;
+  }
+  if (act === 'signout') {
+    if (!ds.sure) { state.confirm = armKey('signout', 'me'); return repaintAccount(); }
+    await BE.signOut(); // SIGNED_OUT → afterAuthChange clears the page's private state
+  }
+}
+
+async function submitProfile(form) {
+  const email = String(new FormData(form).get('email') || '').trim();
+  if (form.id === 'keep-form') {
+    await BE.linkEmail(email);
+    sheetFlash(`Check ${email} to confirm.`);
+    repaintAccount();
+  } else if (form.id === 'signin-form') {
+    sheetFlash(await sendSignInLink(email));
+  }
+}
+
+/* ---- Wiring: header buttons, delegation on #sheet, Escape ------------------------------- */
+function wireSheet() {
+  const sheet = document.getElementById('sheet');
+  if (!sheet) return;
+  const on = (id, kind) => { const b = document.getElementById(id); if (b) b.addEventListener('click', () => toggleSheet(kind)); };
+  on('mine-btn', 'mine'); on('friends-btn', 'friends'); on('me-btn', 'profile');
+
+  sheet.addEventListener('click', async (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el || !sheet.contains(el)) return;
+    const act = el.dataset.act;
+    if (act === 'close') return closeSheet();
+    if (act === 'back') return popSheet();
+    const top = topSheet();
+    if (!top) return;
+    if (!el.dataset.sure) state.confirm = null;
+    try { await PANELS[top.kind].act(act, el.dataset, el, top.data); }
+    catch (err) { sheetFlash(err.message || 'That did not work.', true); }
+  });
+  sheet.addEventListener('input', (e) => { if (e.target && e.target.id === 'friend-q') onFriendQuery(e.target.value); });
+  sheet.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const top = topSheet();
+    if (!top || !PANELS[top.kind].submit) return;
+    try { await PANELS[top.kind].submit(e.target, top.data); }
+    catch (err) { sheetFlash(err.message || 'That did not work.', true); }
+  });
+
+  // Escape closes the top layer only: the top panel, else the inbox.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (topSheet()) { e.preventDefault(); popSheet(); return; }
+    if (state.inboxOpen) { state.inboxOpen = false; renderInbox(); }
+  });
+}
+
+/* ============================================================
+   REALTIME (M4) — one channel while it is honest, polling otherwise
+   "· live" rides the data-source line only while the channel reports
+   SUBSCRIBED. Events refresh the open court's pickups, the Mine list,
+   the courts' counts and the inbox; the inbox poll stretches to 5 min.
+   CHANNEL_ERROR, TIMED_OUT, CLOSED or no realtime at all → the v1.2.0
+   polling (inbox 60 s, courts 5 min) and no claim on the face.
+   ============================================================ */
+function rtLive() { return state.rt.status === 'SUBSCRIBED'; }
+
+// Re-read courts_live (other people's reports and pickup counts) and repaint.
+async function refreshCourts() {
+  if (!live()) return;
+  try {
+    const rows = await BE.fetchCourts();
+    const byId = {};
+    rows.forEach(r => { byId[r.id] = normaliseCourt(r); });
+    COURTS = COURTS.map(c => byId[c.id] || c);
+    renderAll();
+  } catch (e) { console.warn('Refresh failed', e); }
+}
+
+// Inbox: every 60 s, every 5 min while subscribed (events carry it). Courts: every 5 min either
+// way — court_reports is not in the publication (0005), so reports arrive by poll.
+function setPolling(subscribed) {
+  const rt = state.rt;
+  clearInterval(rt.pollInbox); clearInterval(rt.pollCourts);
+  rt.inboxEvery = subscribed ? 300000 : 60000;
+  rt.pollInbox = setInterval(refreshInbox, rt.inboxEvery);
+  rt.pollCourts = setInterval(refreshCourts, 300000);
+  renderDataSource();
+}
+
+// Coalesce a burst of events into one refresh per kind.
+function rtKick(kind, fn) {
+  clearTimeout(state.rt.kicks[kind]);
+  state.rt.kicks[kind] = setTimeout(() => {
+    state.rt.kicks[kind] = null;
+    Promise.resolve().then(fn).catch(e => console.warn('Refresh failed', e));
+  }, 250);
+}
+
+function onRtPickups() {
+  rtKick('pickups', async () => {
+    state.mineFresh = false;
+    const top = topSheet();
+    if (top && top.kind === 'mine') renderMinePanel().catch(() => {});
+    refreshCourtPanel();
+    await refreshCourts();
+  });
+}
+function onRtInbox() { rtKick('inbox', refreshInbox); }
+
+function stopRealtime() {
+  const rt = state.rt;
+  if (rt.unsub) { try { rt.unsub(); } catch (e) { /* already gone */ } }
+  rt.unsub = null; rt.status = null; rt.uid = null;
+  setPolling(false);
+}
+
+async function startRealtime() {
+  const rt = state.rt;
+  stopRealtime();
+  if (!live() || !BE.subscribe) return;
+  const seq = ++rt.seq;
+  try {
+    const s = await BE.getSession();
+    if (seq !== rt.seq) return;
+    rt.uid = s && s.user ? s.user.id : null;
+    rt.unsub = BE.subscribe({
+      onPickups: onRtPickups,
+      onNotifications: onRtInbox,
+      onStatus: (status, err) => {
+        if (seq !== rt.seq) return;          // a retired channel's CLOSED never paints over the new one
+        const was = rt.status;
+        rt.status = status;
+        if (status === 'SUBSCRIBED') {
+          setPolling(true);
+          if (was) { rtKick('pickups', refreshCourts); rtKick('inbox', refreshInbox); } // catch up after a reconnect
+        } else {
+          if (err) console.warn('Realtime', status, err);
+          setPolling(false);
+        }
+      }
+    });
+    if (!rt.unsub) setPolling(false);       // the client has no realtime: polling, no claim
+  } catch (e) {
+    console.warn('Realtime unavailable; polling', e);
+    rt.status = null;
+    setPolling(false);
+  }
+}
+
+/* ============================================================
+   ACCOUNT EVENTS (M4, FR-61)
+   SIGNED_IN · TOKEN_REFRESHED · USER_UPDATED · SIGNED_OUT reload the
+   profile, inbox, Mine, the open court's pickups and the channel. A
+   sign-in or confirmation link lands here with the session in the hash;
+   supabase-js consumes it, this file ignores it and cleans it.
+   ============================================================ */
+const AUTH_EVENTS = new Set(['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED', 'SIGNED_OUT']);
+const AUTH_HASH = /^#(access_token|refresh_token|expires_in|expires_at|token_type|type|provider_token|provider_refresh_token|error|error_code|error_description)=/;
+
+function onAuthChange(event, session) {
+  if (!AUTH_EVENTS.has(event)) return;
+  // auth-js awaits its listeners inside its own lock; defer so nothing here re-enters the client there.
+  setTimeout(() => afterAuthChange(event, session).catch(e => console.warn('Auth refresh failed', e)), 0);
+}
+
+async function afterAuthChange(event, session) {
+  const uid = session && session.user ? session.user.id : null;
+  if (!uid) {
+    state.me = null; state.inbox = []; state.mine = {}; state.minePickups = []; state.myVotes = {};
+    state.friends = { fresh: false, edges: [], incoming: [], list: [], query: '', results: [] };
+    if (state.inboxOpen) { state.inboxOpen = false; renderInbox(); }
+    closeSheet();
+  } else {
+    state.me = await BE.myProfile(true).catch(() => null);
+    await syncAnonymousFlag();
+  }
+  state.mineFresh = false; state.friends.fresh = false;
+  await refreshInbox();                      // also the header buttons and the friends badge
+  refreshCourtPanel();                       // the open court's pickups; an open form survives (renderPickups)
+  const top = topSheet();
+  if (top && top.kind === 'mine') renderMinePanel().catch(() => {});
+  if (top && top.kind === 'profile') {
+    repaintAccount();
+    if (event === 'SIGNED_IN' && !BE.isAnonymous() && BE.userEmail()) sheetFlash('Email confirmed ✓');
+  }
+  if (uid !== state.rt.uid || !rtLive()) await startRealtime();   // the channel follows the session
+  cleanAuthHash();
+}
+
+// The confirmation click made the user permanent; the profile row learns it on the next upsert
+// (upsert_profile in 0002 reads the JWT's is_anonymous claim).
+async function syncAnonymousFlag() {
+  const me = state.me;
+  if (!me || !me.is_anonymous || BE.isAnonymous()) return;
+  try { state.me = await BE.upsertProfile(me.username, me.display_name, me.skill); }
+  catch (e) { console.warn('Could not refresh is_anonymous', e); }
+}
+
+// An #error=… hash (an expired link) is shown in one line; a token hash is supabase-js's to read.
+function authHashNotice() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const desc = params.get('error_description') || params.get('error');
+  if (!desc) return;
+  authNotice(params.get('error_code') === 'otp_expired' ? 'Sign-in link expired · send a new one' : `Sign-in link: ${desc}`);
+}
+
+// Clean an auth hash (or the bare '#' supabase-js leaves) so a reload or a share does not replay it.
+function cleanAuthHash() {
+  if (AUTH_HASH.test(location.hash) || (location.hash === '' && location.href.endsWith('#'))) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+}
+
+function authNotice(text) {
+  const el = document.getElementById('auth-notice');
+  if (!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('hidden', !text);
+}
+
+/* ============================================================
    DEEP LINK  (#pickup=<token>)
    ============================================================ */
 async function openSharedPickup() {
+  if (AUTH_HASH.test(location.hash)) {
+    // A sign-in or confirmation link, not a pickup. supabase-js reads it (detectSessionInUrl) and the
+    // SIGNED_IN event does the rest; wait for the client, surface an error, clean the hash.
+    try { if (BE) await BE.getSession(); } catch (e) { /* nothing consumed it */ }
+    authHashNotice();
+    cleanAuthHash();
+    return;
+  }
   const m = location.hash.match(/^#pickup=([A-Za-z0-9_-]{8,64})$/);
   if (!m) return;
   if (!live()) { console.warn('Shared pickup link ignored: no backend configured.'); return; }
@@ -912,6 +1699,8 @@ async function openSharedPickup() {
     const p = await BE.pickupByToken(m[1]);
     if (!p) { flash('report-feedback', 'That pickup link is no longer valid.', true); return; }
     state.highlightPickup = p.id;
+    state.highlightCourt = p.court_id;
+    state.highlightShown = false;
     selectCourt(p.court_id, { fly: true });
   } catch (e) {
     console.warn('Could not resolve the shared pickup', e);
@@ -954,6 +1743,7 @@ function wireEvents() {
     inboxBtn.addEventListener('click', () => { state.inboxOpen = !state.inboxOpen; renderInbox(); });
   }
 
+  wireSheet();
   window.addEventListener('hashchange', openSharedPickup);
 }
 
@@ -968,6 +1758,8 @@ function updateTime() {
    ============================================================ */
 async function boot() {
   try {
+    // Before the first read: a magic link's SIGNED_IN can fire while the courts are still loading.
+    if (BE) { try { BE.onAuthChange(onAuthChange); } catch (e) { console.warn('Auth events unavailable', e); } }
     const [courts, slams] = await Promise.all([fetchCourts(), fetchSlams()]);
     COURTS = courts;
     GRAND_SLAMS = slams;
@@ -986,18 +1778,11 @@ async function boot() {
     else { renderList(); renderStats(); } // partial render before map ready
 
     if (live()) {
-      refreshInbox();
-      setInterval(refreshInbox, 60000);
-      // Re-read shared courts every 5 minutes so other people's reports and pickups show up.
-      setInterval(async () => {
-        try {
-          const rows = await BE.fetchCourts();
-          const byId = {};
-          rows.forEach(r => { byId[r.id] = normaliseCourt(r); });
-          COURTS = COURTS.map(c => byId[c.id] || c);
-          renderAll();
-        } catch (e) { console.warn('Refresh failed', e); }
-      }, 300000);
+      refreshInbox().then(syncAnonymousFlag);
+      setPolling(false);            // inbox 60 s, courts 5 min until the channel says SUBSCRIBED
+      startRealtime();
+      window.addEventListener('pagehide', stopRealtime);
+      window.addEventListener('pageshow', (e) => { if (e.persisted) startRealtime(); });
       openSharedPickup();
     }
   } catch (err) {

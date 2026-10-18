@@ -42,6 +42,12 @@ $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid(), auth.jwt(), auth.role() to anon, authenticated, service_role;
 
+-- Supabase creates an empty `supabase_realtime` publication in every project; 0005_realtime.sql adds
+-- tables to it when it exists. Provided here so that branch runs in the tests (t_040). The throwaway
+-- cluster runs with the default wal_level, which only draws a "wal_level is insufficient" warning:
+-- the publication is created all the same, and nothing here replicates.
+do $$ begin set local client_min_messages = error; create publication supabase_realtime; end $$;
+
 -- ---------------------------------------------------------------------------------------------
 -- test helpers (not part of the product)
 -- ---------------------------------------------------------------------------------------------
