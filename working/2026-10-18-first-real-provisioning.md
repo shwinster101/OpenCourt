@@ -40,3 +40,16 @@
   if pg_cron reads NOT usable, enable it in the dashboard and `--schedule`.
 - The exact error text of the first run is still wanted, to make the pg_cron step precise rather than
   tolerant.
+
+## Outcome (2026-10-18, later)
+
+- The owner's agent re-ran the patched script: project `pickup` healthy in us-west-1, pg_cron installed,
+  the three jobs active (`pickups-start-due` */1, `pickups-finalize-mvp` */15, `pickups-expire-stale`
+  hourly), `config.js` committed as `a04ce05` (URL + anon key only).
+- **The two-browser proof against the real project** (page served from the repo on localhost:8000, the
+  page's own `config.js`): run 1 → 7 of 8 (step 8, the share-link highlight, timed out once with the row
+  present); run 2 → **8 of 8**. The real project now holds two pickups on Memorial Park with 2 joined
+  each and 2 live reports, written by the proof's throwaway anonymous players.
+- Step 8's first miss is the only difference from the stand-in, where it was 3/3 after the highlight fix;
+  the real realtime channel re-renders the court panel on B's own join event. Follow-up: make the proof
+  wait for the highlight across one more render, or pin the highlight for 5 s after the deep link.
