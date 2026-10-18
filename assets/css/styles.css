@@ -936,3 +936,328 @@ header {
   }
   .brand-tag { display: none; }
 }
+
+/* ============================================================
+   v1.2.0 — shared backend, pickups, inbox
+   ============================================================ */
+.hidden { display: none !important; }
+
+.data-source {
+  margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.data-source::before {
+  content: '';
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ink-mute);
+}
+.data-source[data-source="live"]::before { background: var(--status-open); }
+.data-source[data-source="offline-fallback"]::before { background: var(--status-toss); }
+
+.game-badge {
+  margin-left: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.gm-pin.has-game { box-shadow: 0 0 0 3px var(--accent), 0 2px 8px var(--shadow); }
+
+.report-feedback.error { color: var(--status-full); }
+
+.pickups-section { margin-top: 18px; }
+.pickups-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 10px; }
+.pickups-empty {
+  font-size: 12px; color: var(--ink-mute); padding: 10px 12px;
+  border: 1px dashed var(--border); border-radius: 8px;
+}
+.pickups-empty.error { color: var(--status-full); }
+.pickup-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--paper);
+}
+.pickup-row.in_progress { border-color: var(--status-toss); }
+.pickup-row.highlight { outline: 2px solid var(--accent); }
+.pickup-main { min-width: 0; }
+.pickup-when { font-weight: 600; font-size: 13px; color: var(--ink); }
+.pickup-meta { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; overflow-wrap: anywhere; }
+.pickup-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.pk-state { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; color: var(--ink-mute); }
+
+.pk-btn {
+  font: inherit; font-size: 12px; font-weight: 600;
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--accent-dark); background: var(--accent); color: #fff;
+}
+.pk-btn:hover { filter: brightness(0.95); }
+.pk-btn:disabled { opacity: 0.5; cursor: default; }
+.pk-btn.ghost { background: transparent; color: var(--ink); border-color: var(--border); }
+.pk-btn.danger { background: transparent; color: var(--status-full); border-color: var(--status-full); }
+.pk-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.pickup-new-btn {
+  width: 100%; font: inherit; font-size: 13px; font-weight: 600;
+  padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  border: 1px dashed var(--accent-dark); background: var(--accent-soft); color: var(--accent-dark);
+}
+.pickup-new-btn:hover { background: var(--accent); color: #fff; }
+
+.pickup-form {
+  margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--paper-dark); display: grid; gap: 8px;
+}
+.pickup-form-title { font-weight: 600; font-size: 13px; color: var(--ink); }
+.pickup-form label { display: grid; gap: 3px; font-size: 11px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.04em; }
+.pickup-form input, .pickup-form select {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; width: 100%;
+}
+.pickup-form input:focus-visible, .pickup-form select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pickup-form-btns { display: flex; gap: 8px; margin-top: 4px; }
+.pickup-form-note { font-size: 11px; color: var(--ink-mute); }
+
+.inbox-btn {
+  position: relative; font: inherit; cursor: pointer;
+  background: transparent; border: 1px solid var(--border); border-radius: 999px;
+  color: var(--ink); padding: 4px 10px; line-height: 1;
+}
+.inbox-count {
+  position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 999px; background: var(--status-full); color: #fff;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 18px; text-align: center;
+}
+/* Fixed, not absolute: the header clips its overflow (below), and a fixed box escapes that clip the
+   way .sheet does, so the dropdown stays visible under the bell at every width. */
+.inbox {
+  display: none; position: fixed; right: 16px; top: 64px; z-index: 1200;
+  width: min(360px, calc(100vw - 32px)); max-height: 60vh; overflow: auto;
+  background: var(--paper); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 12px 32px var(--shadow); padding: 8px;
+}
+.inbox.open { display: block; }
+.inbox-empty { font-size: 12px; color: var(--ink-mute); padding: 12px; }
+.inbox-empty.error { color: var(--status-full); }
+.inbox-item { padding: 10px; border-bottom: 1px solid var(--border); display: grid; gap: 6px; }
+.inbox-item:last-of-type { border-bottom: none; }
+.inbox-text { font-size: 12.5px; color: var(--ink); }
+.inbox-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.inbox-all { margin: 8px 10px 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+header { position: relative; }
+
+/* ============================================================
+   M3 screens — header buttons, the sheet (Mine · Friends · Invite ·
+   Result · Vote · Profile), status chips, team toggles, standing tiles
+   ============================================================ */
+.hdr-btn {
+  position: relative; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  background: transparent; border: 1px solid rgba(244, 239, 230, 0.25); border-radius: 999px;
+  color: var(--paper); padding: 4px 10px; line-height: 1.3; max-width: 140px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.hdr-btn:hover { background: rgba(244, 239, 230, 0.1); }
+.hdr-btn:focus-visible, .inbox-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hdr-count {
+  position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 999px; background: var(--accent); color: #fff;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 18px; text-align: center;
+}
+#me-btn { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; font-size: 13px; }
+
+.sheet {
+  position: fixed; right: 16px; top: 76px; z-index: 1300;
+  width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 100px);
+  display: flex; flex-direction: column;
+  background: var(--paper); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 16px 40px var(--shadow);
+}
+.sheet-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--border);
+}
+.sheet-title {
+  flex: 1; min-width: 0; font-family: 'Fraunces', serif; font-weight: 600; font-size: 17px;
+  letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sheet-back, .sheet-close {
+  font: inherit; cursor: pointer; width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent; color: var(--ink);
+  display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+}
+.sheet-back { font-size: 20px; padding-bottom: 2px; }
+.sheet-close { font-size: 13px; }
+.sheet-back:hover, .sheet-close:hover { background: var(--paper-dark); }
+.sheet-back:focus-visible, .sheet-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sheet-body { overflow: auto; padding: 12px 16px; display: grid; gap: 10px; align-content: start; }
+.sheet-foot { margin: 0 16px 12px; }
+.sheet-foot:not(.shown) { display: none; }
+.sheet-sub { font-size: 12px; color: var(--ink-soft); }
+.sheet-h {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-mute); margin-top: 6px; display: flex; align-items: center; gap: 6px;
+}
+.count-pill {
+  font-size: 10px; padding: 0 6px; border-radius: 999px; background: var(--paper-dark); color: var(--ink-soft);
+  line-height: 16px; letter-spacing: 0;
+}
+.sheet-search {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-dark);
+  border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; width: 100%;
+}
+.sheet-search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* status chips: open · in progress · closed · cancelled · invited · joined · organiser */
+.st-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-soft); white-space: nowrap;
+}
+.st-chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-mute); }
+.st-chip.open::before, .st-chip.joined::before { background: var(--status-open); }
+.st-chip.in_progress::before { background: var(--status-toss); animation: pulse 2s infinite; }
+.st-chip.closed::before { background: var(--ink-soft); }
+.st-chip.cancelled { opacity: 0.6; text-decoration: line-through; }
+.st-chip.invited::before { background: var(--accent); }
+.st-chip.owner::before { background: var(--accent-dark); }
+.mvp-chip { font-size: 12px; font-weight: 600; color: var(--accent-dark); white-space: nowrap; }
+
+.mine-list, .friend-list, .vote-list { display: flex; flex-direction: column; gap: 8px; }
+.mine-row, .friend-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper);
+}
+.mine-row.in_progress { border-color: var(--status-toss); }
+.mine-row.cancelled { opacity: 0.6; }
+.mine-main, .friend-main { min-width: 0; }
+.mine-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mine-court { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.friend-main { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.friend-name { font-weight: 600; font-size: 13px; }
+.friend-user { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ink-mute); }
+.skill-chip { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--accent-dark); background: var(--accent-soft); border-radius: 999px; padding: 0 6px; line-height: 15px; }
+.pickup-btns .pk-btn { white-space: nowrap; }
+/* A row with three buttons (Invite · link · Cancel) keeps its text line whole: the buttons drop below it. */
+.pickup-row, .mine-row, .friend-row { flex-wrap: wrap; }
+.pickup-main, .mine-main, .friend-main { flex: 1 1 170px; }
+.pickup-btns { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+
+/* result form */
+.result-grid { display: grid; gap: 6px; }
+.result-head, .result-player { display: grid; grid-template-columns: 1fr 44px 44px; gap: 6px; align-items: center; }
+.result-head span { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-mute); text-align: center; }
+.result-head span:first-child { text-align: left; }
+.result-name { font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.you { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--ink-mute); text-transform: uppercase; margin-left: 4px; }
+.seg {
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; height: 30px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--paper-dark); color: var(--ink-mute);
+}
+.seg.on { background: var(--accent); border-color: var(--accent-dark); color: #fff; }
+.seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.result-sets { display: grid; gap: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); }
+.result-sets input {
+  font: inherit; font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.04em; text-transform: none;
+  color: var(--ink); background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; width: 100%;
+}
+.result-sets input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.result-winner { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.result-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); }
+.radio { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.radio input { accent-color: var(--accent); }
+
+/* vote */
+.vote-row {
+  font: inherit; cursor: pointer; text-align: left; width: 100%;
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--paper); color: var(--ink);
+}
+.vote-row:hover { background: var(--paper-dark); }
+.vote-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.vote-row .friend-name { flex: 1; }
+.vote-star { font-size: 14px; filter: grayscale(1); opacity: 0.5; }
+.vote-row:hover .vote-star { filter: none; opacity: 1; }
+
+/* profile and standing */
+.prof-head { display: grid; gap: 2px; }
+.prof-name { font-family: 'Fraunces', serif; font-weight: 800; font-size: 22px; letter-spacing: -0.02em; }
+.prof-user { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-mute); }
+.pips { letter-spacing: 0.1em; color: var(--accent-dark); }
+.stand-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stand-tile { padding: 10px 8px; border: 1px solid var(--border); border-radius: 10px; text-align: center; background: var(--paper-dark); }
+.stand-tile.accent { background: var(--accent-soft); border-color: var(--accent); }
+.stand-num { font-family: 'Fraunces', serif; font-weight: 800; font-size: 22px; line-height: 1; color: var(--ink); }
+.stand-tile.accent .stand-num { color: var(--accent-dark); }
+.stand-label { margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); display: inline-flex; align-items: center; gap: 3px; }
+.info-btn { font: inherit; font-size: 12px; line-height: 1; cursor: pointer; background: transparent; border: none; color: var(--accent-dark); padding: 0 2px; }
+.info-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.stand-formula { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ink-soft); padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--paper-dark); }
+
+/* The header is a grid item: without min-width: 0 its content (brand, pills, buttons) sizes the
+   whole column, and at phone width the page used to grow past the viewport and get clipped. The
+   overflow clip never reaches #inbox, which is position: fixed (above). */
+header { min-width: 0; overflow: hidden; }
+.header-right { min-width: 0; flex-shrink: 1; }
+.header-right > * { flex-shrink: 0; }
+#me-btn { flex-shrink: 1; min-width: 0; }
+
+@media (max-width: 880px) {
+  header { padding: 0 16px; }
+  .header-right { gap: 8px; }
+  .hdr-word { display: none; }
+  #me-btn { max-width: 90px; }
+  .sheet {
+    right: 8px; left: 8px; top: auto; bottom: 8px; width: auto; max-height: 78vh;
+  }
+  .stand-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   M4 — the live indicator, the auth notice, the account rows
+   ============================================================ */
+/* The data-source dot breathes only while the realtime channel is SUBSCRIBED ("· live"). */
+.data-source[data-live="1"]::before { animation: pulse 2s infinite; }
+
+.auth-notice {
+  margin-top: 8px; padding: 6px 10px; font-size: 11.5px; line-height: 1.35;
+  color: var(--ink); background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+}
+
+.acct { display: grid; gap: 8px; }
+.acct-form { display: flex; gap: 6px; align-items: center; }
+.acct-form input {
+  flex: 1; min-width: 0; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-dark);
+  border: 1px solid var(--border); border-radius: 10px; padding: 7px 10px;
+}
+.acct-form input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.acct-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.acct-email { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--ink-soft); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-btn {
+  font: inherit; font-size: 11px; color: var(--accent-dark); background: transparent; border: none; padding: 0;
+  cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}
+.link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* Phone: the brand and the action buttons are what matters; the slam name and the version badge
+   repeat the sidebar, and the phone's own status bar carries the clock. */
+@media (max-width: 560px) {
+  .slam-pill #slam-name { display: none; }
+  .slam-pill { padding: 6px 8px; }
+  .time-pill, .version { display: none; }
+  .header-right { gap: 6px; }
+}

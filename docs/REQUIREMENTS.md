@@ -1,8 +1,14 @@
 # OpenCourt LA — Software Requirements Specification (SRS)
 
-**Version:** 1.0.1 · **Date:** 2026-09-15 · **Status:** Phase 1 shipped, Phase 2 scoped
+**Version:** 1.3.0 · **Date:** 2026-10-18 · **Status:** Phase 1 shipped; Phase 2 and the Phase 3 people flow built and proven against a local stand-in (awaiting a Supabase project, one command); PickUp foundation adopted
 
 This document consolidates every requirement stated across the CourtFinder project threads into one north star. Each requirement has an ID, a priority, a phase, and a status against the current build.
+
+> **1.1.0 (2026-10-17):** this SRS remains the court-finder specification (FR-01–53, DR-01–07,
+> NFR-01–09). The people half of the product — identity, friends, pickups on courts, results,
+> notifications (FR-60–102, DR-10–14, NFR-10–15) — is specified in [`FOUNDATION.md`](./FOUNDATION.md),
+> which also states the issue, goal, vision and mission of PickUp, the product this repository now
+> carries. The Phase 3 rows below (FR-50–53) are superseded by FOUNDATION §5 Epic E/F where they overlap.
 
 Priority: **M** = must, **S** = should, **C** = could. Status: ✅ done · 🔶 partial · ⬜ not started.
 
