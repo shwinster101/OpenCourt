@@ -293,6 +293,11 @@ header {
 .filter-group { margin-bottom: 14px; }
 .filter-group:last-child { margin-bottom: 0; }
 
+.filters-more {
+  display: none; margin-top: 2px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; color: var(--ink-mute); font: 600 12px 'Inter Tight', sans-serif; cursor: pointer;
+}
+.filters-more[aria-expanded="true"] { color: var(--ink); border-color: var(--ink); }
 .filter-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
@@ -942,6 +947,22 @@ header {
     grid-template-areas: "header" "map" "sidebar";
   }
   .sidebar { border-right: none; border-top: 1px solid var(--border); }
+  /* v1.3.4: the list above the fold on phones — the hero shrinks to its title and the data-source line,
+     tier and status fold behind one toggle, the stats become one slim strip, the season hint sits last. */
+  .sidebar-header { padding: 12px 16px 10px; }
+  .sidebar-title { font-size: 22px; margin-bottom: 4px; }
+  .sidebar-subtitle { display: none; }
+  .filters { padding: 10px 16px; }
+  .filter-group { margin-bottom: 8px; }
+  .filter-label { display: none; }
+  .filters-more { display: inline-block; }
+  .filters-rest { display: none; }
+  .filters-rest.open { display: block; margin-top: 10px; }
+  .stats { padding: 8px 16px; gap: 10px; }
+  .stat { flex-direction: row; align-items: baseline; gap: 6px; }
+  .stat-num { font-size: 20px; }
+  .court-item { padding: 12px 16px; }
+  .season-hint { margin: 8px 16px 16px; }
   /* v1.3.3: on phones the court panel is a bottom sheet over the whole viewport, not a card inside the
      40vh map box (where its header and ✕ sat above the visible area and the page scrolled it away). */
   .detail-panel {

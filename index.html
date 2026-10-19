@@ -79,10 +79,6 @@
       <div class="data-source" id="data-source" data-source="offline">Loading…</div>
       <!-- M4: one line for a sign-in link that failed (an expired magic link lands here with #error=…) -->
       <div class="auth-notice hidden" id="auth-notice" role="status"></div>
-      <div class="season-hint">
-        <strong id="hint-title">Season</strong>
-        <span id="hint-body">—</span>
-      </div>
     </div>
 
     <div class="filters">
@@ -95,6 +91,8 @@
         </div>
       </div>
 
+      <button class="filters-more" id="filters-more" type="button" aria-expanded="false" aria-controls="filters-rest">More filters ▾</button>
+      <div class="filters-rest" id="filters-rest">
       <div class="filter-group">
         <div class="filter-label">Access tier</div>
         <div class="chip-row" id="tier-chips">
@@ -114,6 +112,7 @@
           <button class="chip" data-filter="status" data-value="full">Full</button>
         </div>
       </div>
+      </div>
     </div>
 
     <div class="stats">
@@ -132,6 +131,10 @@
     </div>
 
     <div class="court-list" id="court-list"></div>
+    <div class="season-hint">
+      <strong id="hint-title">Season</strong>
+      <span id="hint-body">—</span>
+    </div>
   </aside>
 
   <!-- MAP -->

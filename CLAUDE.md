@@ -1,5 +1,14 @@
 # CLAUDE.md — OpenCourt (PickUp's successor)
 
+**v1.3.4 — THE LIST ABOVE THE FOLD ON PHONES.** Owner (2026-10-19): "Run item 1, the list above the fold,
+since finding a court is the first thing a visitor does." Below 880px the sidebar hero is its title and the
+data-source line (the subtitle is hidden), the sport chips stay on the face and tier + status fold behind one
+"More filters ▾" toggle (desktop unchanged: all three rows, no toggle), the three counts become one slim strip,
+and the season hint moves to the end of the list on every size. Measured: first court row at y 611 of 844 on a
+390×844 phone (4 rows visible) and 540 of 667 on a 375×667 (2 rows); before, no row was visible without
+scrolling. Desktop first row unchanged in meaning. Offline check 20 pins; fake-backend check errors [].
+Working note: `working/2026-10-18-ux-pass-phone-sheet.md` (part two appended).
+
 **v1.3.3 — THE COURT PANEL IS A BOTTOM SHEET ON PHONES.** Owner (2026-10-18, phone screenshot): "Do a Ux
 pass. I'm unable to close out of this or even see it properly. Map is good but some user wants and usage
 is clunky." Root cause: below 880px the court panel was an absolutely positioned card *inside the 40vh map
