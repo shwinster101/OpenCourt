@@ -32,3 +32,17 @@ Fake-backend check: errors []. Gate: GATE PASSED.
 - The map is 40vh with the panel over it; a "map / list" toggle or a taller map on tap may read better.
 - "Start a pickup here" opens a form inside the sheet; on a phone the keyboard covers half of it.
 - The count tiles (0 · 13 · 7) have no labels until you scroll.
+
+
+## Part two (2026-10-19, v1.3.4): the list above the fold
+
+Owner: "Run item 1, the list above the fold, since finding a court is the first thing a visitor does."
+
+- Phones (≤880px): hero = title + data-source line (subtitle hidden); sport chips on the face; tier and status
+  behind `#filters-more` (aria-expanded, "More filters ▾" / "Fewer filters ▴"); stats as one strip; the season
+  hint moved after the list in the markup (every size; it is secondary).
+- Measured (headless Chromium, live config): 390×844 first row top 611, 4 rows visible; 375×667 first row 540,
+  2 rows visible; the toggle opens the two folded rows and a tier chip still filters (Free → 14 rows).
+  1280×800 unchanged (no toggle, three rows). No horizontal scroll at any width.
+- Remaining items (2–5) stay listed above; the owner's long-term line is a phone-first pass with a word and
+  tap budget pinned in the browser check.

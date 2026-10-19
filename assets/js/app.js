@@ -1754,6 +1754,15 @@ async function openSharedPickup() {
    ============================================================ */
 function wireEvents() {
   document.getElementById('detail-close').addEventListener('click', closeDetail);
+  // Phones: tier and status filters fold behind one toggle (v1.3.4); desktop shows them always via CSS.
+  const more = document.getElementById('filters-more');
+  if (more) more.addEventListener('click', () => {
+    const rest = document.getElementById('filters-rest');
+    const open = !rest.classList.contains('open');
+    rest.classList.toggle('open', open);
+    more.setAttribute('aria-expanded', String(open));
+    more.textContent = open ? 'Fewer filters ▴' : 'More filters ▾';
+  });
   document.getElementById('detail-backdrop').addEventListener('click', closeDetail);
 
   document.querySelectorAll('.chip').forEach(chip => {
